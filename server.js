@@ -2,6 +2,8 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const multer = require('multer');
+const xlsx = require('xlsx');
 const { chainwayApi } = require('chainway-rfid');
 
 const app = express();
@@ -16,6 +18,25 @@ const io = socketIo(server, {
 // Configuração CORS
 app.use(cors());
 app.use(express.json());
+
+// Configuração do Multer para upload de arquivos
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB máximo
+  },
+  fileFilter: (req, file, cb) => {
+    // Aceitar apenas arquivos Excel
+    if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        file.mimetype === 'application/vnd.ms-excel' ||
+        file.originalname.endsWith('.xlsx') ||
+        file.originalname.endsWith('.xls')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas arquivos Excel são permitidos (.xlsx, .xls)'), false);
+    }
+  }
+});
 
 // Configuração padrão do leitor RFID (pode ser alterada via formulário)
 let rfidConfig = {
@@ -35,6 +56,15 @@ let totalReadings = 0;
 let uniqueTIDs = new Set(); // Contar TIDs únicos
 let readings = []; // Array de leituras para histórico
 let receiverAttached = false;
+
+// Sistema de armazenamento de planilhas Excel
+let excelData = []; // Array com todos os itens da planilha
+let excelMetadata = {
+  fileName: '',
+  uploadDate: null,
+  totalItems: 0,
+  columns: []
+};
 
 // Keep-alive e verificação de conexão para PORTAL (sempre ativo)
 const KEEP_ALIVE_INTERVAL = 30000; // 30 segundos - apenas verificação
@@ -455,6 +485,154 @@ function startAutoRestart() {
   }, AUTO_RESTART_INTERVAL);
   
   console.log('🔄 Auto-restart iniciado (40s) - Para e reinicia leitura automaticamente');
+}
+
+// Função para processar planilha Excel
+function processExcelFile(buffer, fileName) {
+  try {
+    console.log(`📊 Processando planilha: ${fileName}`);
+    
+    // Ler a planilha
+    const workbook = xlsx.read(buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0]; // Primeira aba
+    const worksheet = workbook.Sheets[sheetName];
+    
+    // Converter para JSON
+    const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+    
+    if (jsonData.length === 0) {
+      throw new Error('Planilha vazia ou sem dados');
+    }
+    
+    // Primeira linha são os cabeçalhos
+    const headers = jsonData[0];
+    const dataRows = jsonData.slice(1);
+    
+    // Processar dados
+    const processedData = dataRows.map((row, index) => {
+      const item = {
+        id: index + 1,
+        row: index + 2 // +2 porque index começa em 0 e primeira linha é cabeçalho
+      };
+      
+      // Adicionar cada coluna
+      headers.forEach((header, colIndex) => {
+        if (header && row[colIndex] !== undefined) {
+          item[header] = row[colIndex];
+        }
+      });
+      
+      return item;
+    }).filter(item => {
+      // Filtrar linhas vazias
+      const hasData = Object.values(item).some(value => 
+        value !== undefined && value !== null && value !== ''
+      );
+      return hasData;
+    });
+    
+    // Atualizar dados globais
+    excelData = processedData;
+    excelMetadata = {
+      fileName: fileName,
+      uploadDate: new Date().toISOString(),
+      totalItems: processedData.length,
+      columns: headers
+    };
+    
+    console.log(`✅ Planilha processada com sucesso:`);
+    console.log(`  📁 Arquivo: ${fileName}`);
+    console.log(`  📊 Total de itens: ${processedData.length}`);
+    console.log(`  📋 Colunas: ${headers.join(', ')}`);
+    
+    // Emitir atualização para todos os clientes
+    io.emit('excel-data-updated', {
+      data: excelData,
+      metadata: excelMetadata
+    });
+    
+    return {
+      success: true,
+      data: processedData,
+      metadata: excelMetadata
+    };
+    
+  } catch (error) {
+    console.error('❌ Erro ao processar planilha:', error.message);
+    throw error;
+  }
+}
+
+// Função para buscar itens na planilha
+function searchExcelItems(query, filters = {}) {
+  try {
+    if (!excelData || excelData.length === 0) {
+      return { items: [], total: 0, message: 'Nenhuma planilha carregada' };
+    }
+    
+    let filteredData = [...excelData];
+    
+    // Aplicar filtros
+    if (filters.columns && filters.columns.length > 0) {
+      filteredData = filteredData.map(item => {
+        const filteredItem = { id: item.id, row: item.row };
+        filters.columns.forEach(col => {
+          if (item[col] !== undefined) {
+            filteredItem[col] = item[col];
+          }
+        });
+        return filteredItem;
+      });
+    }
+    
+    // Aplicar busca por texto
+    if (query && query.trim()) {
+      const searchTerm = query.toLowerCase().trim();
+      filteredData = filteredData.filter(item => {
+        return Object.values(item).some(value => {
+          if (value === null || value === undefined) return false;
+          return String(value).toLowerCase().includes(searchTerm);
+        });
+      });
+    }
+    
+    return {
+      items: filteredData,
+      total: filteredData.length,
+      message: `Encontrados ${filteredData.length} itens`
+    };
+    
+  } catch (error) {
+    console.error('❌ Erro na busca:', error.message);
+    return { items: [], total: 0, message: `Erro na busca: ${error.message}` };
+  }
+}
+
+// Função para limpar dados da planilha
+function clearExcelData() {
+  try {
+    excelData = [];
+    excelMetadata = {
+      fileName: '',
+      uploadDate: null,
+      totalItems: 0,
+      columns: []
+    };
+    
+    console.log('🧹 Dados da planilha limpos');
+    
+    // Emitir atualização para todos os clientes
+    io.emit('excel-data-updated', {
+      data: excelData,
+      metadata: excelMetadata
+    });
+    
+    return { success: true, message: 'Dados da planilha limpos com sucesso' };
+    
+  } catch (error) {
+    console.error('❌ Erro ao limpar dados:', error.message);
+    return { success: false, message: `Erro ao limpar: ${error.message}` };
+  }
 }
 
 // Função para aplicar potência em tempo real
@@ -925,6 +1103,33 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Eventos para sistema de Excel
+  socket.on('get-excel-data', () => {
+    socket.emit('excel-data-updated', {
+      data: excelData,
+      metadata: excelMetadata
+    });
+  });
+
+  socket.on('search-excel-items', (data) => {
+    try {
+      const { query, columns } = data;
+      const result = searchExcelItems(query, columns);
+      socket.emit('excel-search-result', result);
+    } catch (error) {
+      socket.emit('error', { message: 'Erro na busca: ' + error.message });
+    }
+  });
+
+  socket.on('clear-excel-data', () => {
+    try {
+      const result = clearExcelData();
+      socket.emit('excel-clear-result', result);
+    } catch (error) {
+      socket.emit('error', { message: 'Erro ao limpar dados: ' + error.message });
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('🔌 Cliente desconectado:', socket.id);
   });
@@ -938,7 +1143,12 @@ app.get('/api/status', (req, res) => {
     totalReadings: totalReadings,
     uniqueTIDs: uniqueTIDs.size, // Adicionar contagem de TIDs únicos
     readings: readings.slice(-10), // Últimas 10 leituras
-    config: rfidConfig
+    config: rfidConfig,
+    excel: {
+      hasData: excelData.length > 0,
+      totalItems: excelData.length,
+      metadata: excelMetadata
+    }
   });
 });
 
@@ -1143,6 +1353,103 @@ function cleanupMemory() {
 
 // Limpeza a cada 5 minutos
 setInterval(cleanupMemory, 300000);
+
+// API Routes para sistema de Excel
+app.post('/api/excel/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Nenhum arquivo enviado' 
+      });
+    }
+    
+    console.log(`📤 Upload recebido: ${req.file.originalname} (${req.file.size} bytes)`);
+    
+    // Processar arquivo Excel
+    const result = processExcelFile(req.file.buffer, req.file.originalname);
+    
+    res.json({
+      success: true,
+      message: 'Planilha processada com sucesso',
+      data: result
+    });
+    
+  } catch (error) {
+    console.error('❌ Erro no upload:', error.message);
+    res.status(500).json({
+      success: false,
+      message: `Erro ao processar planilha: ${error.message}`
+    });
+  }
+});
+
+app.get('/api/excel/data', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: excelData,
+      metadata: excelMetadata
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: `Erro ao buscar dados: ${error.message}`
+    });
+  }
+});
+
+app.get('/api/excel/search', (req, res) => {
+  try {
+    const { query, columns } = req.query;
+    
+    const filters = {};
+    if (columns) {
+      filters.columns = columns.split(',').map(col => col.trim());
+    }
+    
+    const result = searchExcelItems(query, filters);
+    
+    res.json({
+      success: true,
+      ...result
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: `Erro na busca: ${error.message}`
+    });
+  }
+});
+
+app.delete('/api/excel/clear', (req, res) => {
+  try {
+    const result = clearExcelData();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: `Erro ao limpar dados: ${error.message}`
+    });
+  }
+});
+
+app.get('/api/excel/status', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      hasData: excelData.length > 0,
+      totalItems: excelData.length,
+      metadata: excelMetadata
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: `Erro ao buscar status: ${error.message}`
+    });
+  }
+});
 
 // Tratamento de erro para setInterval
 process.on('uncaughtException', (error) => {

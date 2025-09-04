@@ -1,288 +1,437 @@
-import React, { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, Download, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Upload, FileSpreadsheet, Search, Trash2, Download, Eye, Filter } from 'lucide-react';
+import { useSocket } from '../../hooks/useSocket';
 
-
-interface Piece {
-  id: string;
-  pieceNumber: string;
-  pieceName: string;
-  epc: string;
-  category: string;
-  description: string;
-  createdAt: Date;
+interface ExcelItem {
+  id: number;
+  row: number;
+  [key: string]: any;
 }
 
-export default function ExcelUploadPanel() {
-  const [pieces, setPieces] = useState<Piece[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+interface ExcelMetadata {
+  fileName: string;
+  uploadDate: string;
+  totalItems: number;
+  columns: string[];
+}
+
+interface ExcelData {
+  data: ExcelItem[];
+  metadata: ExcelMetadata;
+}
+
+const ExcelUploadPanel: React.FC = () => {
+  const socket = useSocket();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      processExcelFile(file);
+  
+  const [excelData, setExcelData] = useState<ExcelData>({
+    data: [],
+    metadata: {
+      fileName: '',
+      uploadDate: '',
+      totalItems: 0,
+      columns: []
     }
-  };
+  });
+  
+  const [isUploading, setIsUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [filteredData, setFilteredData] = useState<ExcelItem[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
 
-  const processExcelFile = async (file: File) => {
-    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-      alert('Por favor, selecione um arquivo Excel (.xlsx ou .xls)');
-      return;
+  useEffect(() => {
+    if (socket) {
+      // Solicitar dados atuais
+      socket.emit('get-excel-data');
+      
+      // Escutar atualizações
+      socket.on('excel-data-updated', (data: ExcelData) => {
+        setExcelData(data);
+        setFilteredData(data.data);
+        setCurrentPage(1);
+      });
+      
+      socket.on('excel-search-result', (result: { items: ExcelItem[]; total: number; message: string }) => {
+        setFilteredData(result.items);
+        setCurrentPage(1);
+      });
+      
+      socket.on('excel-clear-result', (result: { success: boolean; message: string }) => {
+        if (result.success) {
+          setExcelData({
+            data: [],
+            metadata: {
+              fileName: '',
+              uploadDate: '',
+              totalItems: 0,
+              columns: []
+            }
+          });
+          setFilteredData([]);
+          setSearchQuery('');
+          setSelectedColumns([]);
+        }
+      });
     }
+
+    return () => {
+      if (socket) {
+        socket.off('excel-data-updated');
+        socket.off('excel-search-result');
+        socket.off('excel-clear-result');
+      }
+    };
+  }, [socket]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
     setIsUploading(true);
-    setUploadProgress(0);
-
+    
     try {
-      // Simular processamento do arquivo
-      await simulateFileProcessing();
+      const formData = new FormData();
+      formData.append('file', file);
       
-      // Dados de exemplo (substituir por processamento real)
-      const mockPieces: Piece[] = [
-        {
-          id: '1',
-          pieceNumber: '001',
-          pieceName: 'Uniforme Industrial',
-          epc: 'E200341201B80201100000001',
-          category: 'Vestuário',
-          description: 'Uniforme padrão azul',
-          createdAt: new Date(),
-        },
-        {
-          id: '2',
-          pieceNumber: '002',
-          pieceName: 'Calça Jeans',
-          epc: 'E200341201B80201100000002',
-          category: 'Vestuário',
-          description: 'Calça jeans azul escuro',
-          createdAt: new Date(),
-        },
-        {
-          id: '3',
-          pieceNumber: '003',
-          pieceName: 'Camisa Social',
-          epc: 'E200341201B80201100000003',
-          category: 'Vestuário',
-          description: 'Camisa branca social',
-          createdAt: new Date(),
-        },
-      ];
-
-      setPieces(mockPieces);
-      alert(`${mockPieces.length} peças carregadas com sucesso!`);
+      const response = await fetch('/api/excel/upload', {
+        method: 'POST',
+        body: formData,
+      });
       
-      // Limpar input
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Planilha processada com sucesso');
+      } else {
+        console.error('❌ Erro ao processar planilha:', result.message);
+      }
+    } catch (error) {
+      console.error('❌ Erro no upload:', error);
+    } finally {
+      setIsUploading(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      
-    } catch (error) {
-      alert('Erro ao processar arquivo Excel');
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
     }
   };
 
-  const simulateFileProcessing = () => {
-    return new Promise<void>((resolve) => {
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        setUploadProgress(progress);
-        
-        if (progress >= 100) {
-          clearInterval(interval);
-          setTimeout(resolve, 500);
-        }
-      }, 100);
-    });
+  const handleSearch = () => {
+    if (socket) {
+      socket.emit('search-excel-items', {
+        query: searchQuery,
+        columns: selectedColumns.length > 0 ? selectedColumns : undefined
+      });
+    }
   };
 
-  const handleDownloadTemplate = () => {
-    // Criar template CSV
+  const handleClearData = () => {
+    if (socket && confirm('Tem certeza que deseja limpar todos os dados da planilha?')) {
+      socket.emit('clear-excel-data');
+    }
+  };
+
+  const handleColumnToggle = (column: string) => {
+    setSelectedColumns(prev => 
+      prev.includes(column) 
+        ? prev.filter(col => col !== column)
+        : [...prev, column]
+    );
+  };
+
+  const handleDownloadCSV = () => {
+    if (filteredData.length === 0) return;
+    
+    const headers = excelData.metadata.columns;
     const csvContent = [
-      'ID,Numero_Peca,Nome_Peca,EPC,Categoria,Descricao',
-      '1,001,Uniforme Industrial,E200341201B80201100000001,Vestuário,Uniforme padrão azul',
-      '2,002,Calça Jeans,E200341201B80201100000002,Vestuário,Calça jeans azul escuro',
-      '3,003,Camisa Social,E200341201B80201100000003,Vestuário,Camisa branca social'
+      headers.join(','),
+      ...filteredData.map(item => 
+        headers.map(header => {
+          const value = item[header];
+          return typeof value === 'string' && value.includes(',') 
+            ? `"${value}"` 
+            : value || '';
+        }).join(',')
+      )
     ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.href = url;
-    link.download = 'template_pecas.csv';
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${excelData.metadata.fileName.replace(/\.[^/.]+$/, '')}_filtered.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
     link.click();
-    window.URL.revokeObjectURL(url);
+    document.body.removeChild(link);
   };
 
-  const handleClearPieces = () => {
-    if (pieces.length === 0) {
-      alert('Não há peças para limpar');
-      return;
-    }
-
-    if (confirm('Tem certeza que deseja limpar todas as peças?')) {
-      setPieces([]);
-      alert('Todas as peças foram removidas');
-    }
-  };
-
-  const handleExportPieces = () => {
-    if (pieces.length === 0) {
-      alert('Não há peças para exportar');
-      return;
-    }
-
-    const csvContent = [
-      'ID,Numero_Peca,Nome_Peca,EPC,Categoria,Descricao,Data_Criacao',
-      ...pieces.map(piece => [
-        piece.id,
-        piece.pieceNumber,
-        piece.pieceName,
-        piece.epc,
-        piece.category,
-        piece.description,
-        piece.createdAt.toISOString()
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `pecas_exportadas_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-  };
+  // Paginação
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentData = filteredData.slice(startIndex, endIndex);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <FileSpreadsheet className="w-6 h-6 text-blue-600" />
-        <h2 className="text-xl font-semibold text-gray-800">Upload de Arquivo Excel</h2>
-      </div>
-      
-      <div className="space-y-6">
-        {/* Área de upload */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
-          <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <div className="mb-4">
-            <p className="text-lg font-medium text-gray-700 mb-2">
-              Arraste e solte seu arquivo Excel aqui
-            </p>
-            <p className="text-sm text-gray-500">
-              Ou clique para selecionar um arquivo
-            </p>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <FileSpreadsheet className="text-blue-600" />
+          Sistema de Planilhas Excel
+        </h2>
+        
+        {excelData.data.length > 0 && (
+          <div className="flex gap-2">
+            <button
+              onClick={handleDownloadCSV}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Download size={16} />
+              Exportar CSV
+            </button>
+            <button
+              onClick={handleClearData}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <Trash2 size={16} />
+              Limpar Dados
+            </button>
           </div>
-          
+        )}
+      </div>
+
+      {/* Upload de Arquivo */}
+      <div className="mb-6">
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
           <input
             ref={fileInputRef}
             type="file"
             accept=".xlsx,.xls"
-            onChange={handleFileSelect}
+            onChange={handleFileUpload}
             className="hidden"
-            id="excel-upload"
           />
           
-          <label
-            htmlFor="excel-upload"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            Selecionar Arquivo
-          </label>
-        </div>
-
-        {/* Barra de progresso */}
-        {isUploading && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>Processando arquivo...</span>
-              <span>{uploadProgress}%</span>
+          <div className="flex flex-col items-center gap-4">
+            <Upload className="text-gray-400" size={48} />
+            <div>
+              <p className="text-lg font-medium text-gray-700">
+                {isUploading ? 'Processando...' : 'Clique para fazer upload da planilha Excel'}
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Suporta arquivos .xlsx e .xls (máximo 10MB)
+              </p>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
-              ></div>
+            
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {isUploading ? 'Processando...' : 'Selecionar Arquivo'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Informações da Planilha */}
+      {excelData.data.length > 0 && (
+        <div className="mb-6 bg-blue-50 rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Arquivo</p>
+              <p className="text-lg font-semibold text-gray-800">{excelData.metadata.fileName}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total de Itens</p>
+              <p className="text-lg font-semibold text-gray-800">{excelData.metadata.totalItems}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Colunas</p>
+              <p className="text-lg font-semibold text-gray-800">{excelData.metadata.columns.length}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Upload</p>
+              <p className="text-lg font-semibold text-gray-800">
+                {new Date(excelData.metadata.uploadDate).toLocaleDateString()}
+              </p>
             </div>
           </div>
-        )}
-
-        {/* Botões de ação */}
-        <div className="flex gap-3">
-          <button
-            onClick={handleDownloadTemplate}
-            className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Baixar Template
-          </button>
-          
-          {pieces.length > 0 && (
-            <>
-              <button
-                onClick={handleExportPieces}
-                className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                Exportar Peças
-              </button>
-              
-              <button
-                onClick={handleClearPieces}
-                className="flex items-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                Limpar Todas
-              </button>
-            </>
-          )}
         </div>
+      )}
 
-        {/* Lista de peças carregadas */}
-        {pieces.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-800">
-              Peças Carregadas ({pieces.length})
-            </h3>
+      {/* Busca e Filtros */}
+      {excelData.data.length > 0 && (
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="Buscar itens..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
             
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              <Filter size={16} />
+              Filtros
+            </button>
+            
+            <button
+              onClick={handleSearch}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Buscar
+            </button>
+          </div>
+
+          {/* Filtros de Colunas */}
+          {showFilters && (
             <div className="bg-gray-50 rounded-lg p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {pieces.map((piece) => (
-                  <div key={piece.id} className="bg-white p-4 rounded-lg border border-gray-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-600">#{piece.pieceNumber}</span>
-                      <span className="text-xs text-gray-500">{piece.category}</span>
-                    </div>
-                    <h4 className="font-medium text-gray-800 mb-1">{piece.pieceName}</h4>
-                    <p className="text-sm text-gray-600 mb-2">{piece.description}</p>
-                    <div className="text-xs text-gray-500">
-                      <div>EPC: {piece.epc.slice(0, 12)}...</div>
-                      <div>Data: {piece.createdAt.toLocaleDateString()}</div>
-                    </div>
-                  </div>
+              <p className="text-sm font-medium text-gray-700 mb-3">Selecionar colunas para exibir:</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {excelData.metadata.columns.map((column) => (
+                  <label key={column} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedColumns.length === 0 || selectedColumns.includes(column)}
+                      onChange={() => handleColumnToggle(column)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">{column}</span>
+                  </label>
                 ))}
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
-        {/* Informações do sistema */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span className="text-sm font-medium text-blue-800">Sistema de Upload</span>
+      {/* Tabela de Dados */}
+      {excelData.data.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    #
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Linha
+                  </th>
+                  {excelData.metadata.columns.map((column) => (
+                    <th key={column} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {column}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {currentData.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {item.id}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.row}
+                    </td>
+                    {excelData.metadata.columns.map((column) => (
+                      <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {item[column] || '-'}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <p className="text-sm text-blue-700">
-            Faça upload de arquivos Excel (.xlsx, .xls) para carregar peças no sistema. 
-            Baixe o template para ver o formato correto dos dados.
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+              <div className="flex-1 flex justify-between sm:hidden">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Próxima
+                </button>
+              </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Mostrando <span className="font-medium">{startIndex + 1}</span> a{' '}
+                    <span className="font-medium">{Math.min(endIndex, filteredData.length)}</span> de{' '}
+                    <span className="font-medium">{filteredData.length}</span> resultados
+                  </p>
+                </div>
+                <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                    <button
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      Anterior
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          page === currentPage
+                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      Próxima
+                    </button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Estado Vazio */}
+      {excelData.data.length === 0 && (
+        <div className="text-center py-12">
+          <FileSpreadsheet className="mx-auto text-gray-400" size={64} />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Nenhuma planilha carregada</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Faça upload de uma planilha Excel para começar
           </p>
         </div>
-      </div>
+      )}
     </div>
   );
-}
+};
+
+export default ExcelUploadPanel;

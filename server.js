@@ -41,9 +41,12 @@ const KEEP_ALIVE_INTERVAL = 15000; // 15 segundos - balanceado
 const MAX_INACTIVITY_TIME = 30000; // 30 segundos - tempo razoável
 const CONNECTION_CHECK_INTERVAL = 10000; // 10 segundos - menos frequente
 const MAX_READINGS_HISTORY = 50; // Reduzir histórico para economizar memória
+const READING_HEALTH_CHECK_INTERVAL = 20000; // 20 segundos - verificar se está lendo
 let keepAliveInterval = null;
 let connectionCheckInterval = null;
+let readingHealthCheckInterval = null;
 let lastActivityTime = null;
+let lastReadingTime = null;
 
 console.log('🚀 Servidor RFID rodando na porta', PORT);
 console.log('📡 Configuração padrão:', `${rfidConfig.ip}:${rfidConfig.port}`);
@@ -67,6 +70,7 @@ function connectToRFIDReader() {
           
           // Atualizar tempo de atividade quando receber dados
           lastActivityTime = Date.now();
+          lastReadingTime = Date.now();
 
           const reading = {
             id: Date.now(),
@@ -95,6 +99,7 @@ function connectToRFIDReader() {
       // Iniciar sistema de keep-alive
       startKeepAlive();
       startConnectionCheck();
+      startReadingHealthCheck();
       
       resolve();
     } catch (error) {
@@ -156,6 +161,45 @@ function startConnectionCheck() {
   console.log('🔍 Verificação de conexão otimizada iniciada (10s)');
 }
 
+// Verificação de saúde da leitura RFID
+function startReadingHealthCheck() {
+  if (readingHealthCheckInterval) {
+    clearInterval(readingHealthCheckInterval);
+  }
+  
+  readingHealthCheckInterval = setInterval(async () => {
+    if (isConnected && isReading) {
+      try {
+        const currentTime = Date.now();
+        
+        // Verificar se está lendo há muito tempo sem receber dados
+        if (lastReadingTime && (currentTime - lastReadingTime) > 45000) { // 45 segundos
+          console.log('⚠️ Leitura parou de funcionar - reiniciando scan...');
+          
+          try {
+            // Tentar reiniciar o scan
+            await chainwayApi.stopScan();
+            await new Promise(resolve => setTimeout(resolve, 500)); // Pausa de 500ms
+            await chainwayApi.startScan();
+            
+            lastReadingTime = Date.now();
+            lastActivityTime = Date.now();
+            console.log('✅ Scan RFID reiniciado com sucesso');
+          } catch (restartError) {
+            console.log('❌ Erro ao reiniciar scan:', restartError.message);
+            // Se falhar, tentar reconectar completamente
+            await handleConnectionLoss();
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ Erro no health check de leitura:', error.message);
+      }
+    }
+  }, READING_HEALTH_CHECK_INTERVAL);
+  
+  console.log('📊 Health check de leitura RFID iniciado (20s)');
+}
+
 // Tratar perda de conexão
 async function handleConnectionLoss() {
   console.log('🔄 Detectada perda de conexão, tentando reconectar...');
@@ -169,6 +213,10 @@ async function handleConnectionLoss() {
     if (connectionCheckInterval) {
       clearInterval(connectionCheckInterval);
       connectionCheckInterval = null;
+    }
+    if (readingHealthCheckInterval) {
+      clearInterval(readingHealthCheckInterval);
+      readingHealthCheckInterval = null;
     }
     
     // Marcar como desconectado
@@ -218,6 +266,7 @@ async function startContinuousReading() {
     await chainwayApi.startScan();
     isReading = true;
     lastActivityTime = Date.now(); // Atualizar tempo de atividade
+    lastReadingTime = Date.now(); // Registrar início da leitura
     console.log('✅ Leitura contínua iniciada');
   } catch (error) {
     console.error('❌ Erro ao iniciar leitura:', error.message || error);
@@ -235,6 +284,7 @@ async function stopContinuousReading() {
     await chainwayApi.stopScan();
     isReading = false;
     lastActivityTime = Date.now(); // Atualizar tempo de atividade
+    lastReadingTime = null; // Limpar tempo de leitura
     console.log('✅ Leitura contínua parada');
   } catch (error) {
     console.error('❌ Erro ao parar leitura:', error.message || error);
@@ -258,6 +308,12 @@ async function disconnectFromRFIDReader() {
       clearInterval(connectionCheckInterval);
       connectionCheckInterval = null;
       console.log('🔍 Verificação de conexão parada');
+    }
+    
+    if (readingHealthCheckInterval) {
+      clearInterval(readingHealthCheckInterval);
+      readingHealthCheckInterval = null;
+      console.log('📊 Health check de leitura parado');
     }
     
     // Verificar se os métodos existem antes de chamar
@@ -296,6 +352,10 @@ async function disconnectFromRFIDReader() {
     if (connectionCheckInterval) {
       clearInterval(connectionCheckInterval);
       connectionCheckInterval = null;
+    }
+    if (readingHealthCheckInterval) {
+      clearInterval(readingHealthCheckInterval);
+      readingHealthCheckInterval = null;
     }
   }
 }

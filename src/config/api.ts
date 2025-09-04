@@ -11,7 +11,8 @@ export const API_CONFIG = {
     CONNECT: '/api/connect',
     DISCONNECT: '/api/disconnect',
     START_READING: '/api/start-reading',
-    STOP_READING: '/api/stop-reading'
+    STOP_READING: '/api/stop-reading',
+    POWER: '/api/power'
   },
   
   // Configurações de timeout

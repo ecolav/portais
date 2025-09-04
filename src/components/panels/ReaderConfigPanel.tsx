@@ -38,6 +38,33 @@ export default function ReaderConfigPanel({ config, onConfigChange }: ReaderConf
     onConfigChange({ [field]: value });
   };
 
+  // Função para aplicar apenas a potência em tempo real
+  const applyPowerOnly = async (power: number) => {
+    setIsApplying(true);
+    setMessage(null);
+
+    try {
+      const response = await apiRequest(API_CONFIG.ENDPOINTS.POWER, {
+        method: 'POST',
+        body: JSON.stringify({ power }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage({ type: 'success', text: `Potência ajustada para ${power} dBm!` });
+        // Atualizar configuração local
+        onConfigChange({ power });
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Erro ao ajustar potência' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Erro de conexão com o servidor' });
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
   const handleAntennaToggle = (antenna: number) => {
     const newAntennas = config.antennas.includes(antenna)
       ? config.antennas.filter(a => a !== antenna)
@@ -153,23 +180,99 @@ export default function ReaderConfigPanel({ config, onConfigChange }: ReaderConf
             <h3 className="font-medium text-gray-700">Potência de Transmissão</h3>
           </div>
           
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>Baixa</span>
-              <span>{config.power} dBm</span>
-              <span>Alta</span>
+          <div className="space-y-4">
+            {/* Controles de Potência */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => {
+                  const newPower = Math.max(0, config.power - 1);
+                  handleInputChange('power', newPower);
+                  applyPowerOnly(newPower);
+                }}
+                disabled={config.power <= 0 || isApplying}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                <span className="text-lg font-bold">-</span>
+                Diminuir
+              </button>
+              
+              <div className="flex-1 text-center">
+                <div className="text-2xl font-bold text-blue-600">{config.power}</div>
+                <div className="text-sm text-gray-600">dBm</div>
+              </div>
+              
+              <button
+                onClick={() => {
+                  const newPower = Math.min(30, config.power + 1);
+                  handleInputChange('power', newPower);
+                  applyPowerOnly(newPower);
+                }}
+                disabled={config.power >= 30 || isApplying}
+                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                <span className="text-lg font-bold">+</span>
+                Aumentar
+              </button>
             </div>
-            <input
+            
+            {/* Slider de Potência */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>0 dBm (Baixa)</span>
+                <span>30 dBm (Alta)</span>
+              </div>
+                          <input
               type="range"
               min="0"
               max="30"
               value={config.power}
-              onChange={(e) => handleInputChange('power', parseInt(e.target.value))}
+              onChange={(e) => {
+                const newPower = parseInt(e.target.value);
+                handleInputChange('power', newPower);
+                // Aplicar potência automaticamente após um pequeno delay
+                setTimeout(() => applyPowerOnly(newPower), 500);
+              }}
               className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
             />
-            <p className="text-xs text-gray-500 text-center">
-              Potência de transmissão da antena RFID
-            </p>
+              <p className="text-xs text-gray-500 text-center">
+                Potência de transmissão da antena RFID
+              </p>
+            </div>
+            
+            {/* Indicador de Potência */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    config.power <= 10 ? 'bg-green-500' :
+                    config.power <= 20 ? 'bg-yellow-500' :
+                    config.power <= 25 ? 'bg-orange-500' : 'bg-red-500'
+                  }`}
+                  style={{ width: `${(config.power / 30) * 100}%` }}
+                ></div>
+              </div>
+              <span className={`text-sm font-medium ${
+                config.power <= 10 ? 'text-green-600' :
+                config.power <= 20 ? 'text-yellow-600' :
+                config.power <= 25 ? 'text-orange-600' : 'text-red-600'
+              }`}>
+                {config.power <= 10 ? 'Baixa' :
+                 config.power <= 20 ? 'Média' :
+                 config.power <= 25 ? 'Alta' : 'Muito Alta'}
+              </span>
+            </div>
+            
+            {/* Botão para Aplicar Apenas Potência */}
+            <div className="flex justify-center">
+              <button
+                onClick={() => applyPowerOnly(config.power)}
+                disabled={isApplying}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                <Zap className="w-4 h-4" />
+                {isApplying ? 'Aplicando...' : 'Aplicar Potência'}
+              </button>
+            </div>
           </div>
         </div>
 

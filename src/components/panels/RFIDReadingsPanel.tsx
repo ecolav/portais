@@ -4,6 +4,7 @@ import { Tag, Trash2, Eye, Clock, Signal } from 'lucide-react';
 interface RFIDReading {
   id: number;
   epc: string;
+  tid?: string;
   rssi: number;
   antenna: number;
   timestamp: string;
@@ -66,7 +67,7 @@ export default function RFIDReadingsPanel({ readings, onClearReadings }: RFIDRea
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="font-mono text-sm font-medium text-gray-800">
-                      {reading.epc}
+                      {reading.tid || reading.epc}
                     </span>
                     <span className={`text-xs px-2 py-1 rounded-full ${getRSSIColor(reading.rssi)} bg-gray-100`}>
                       {getRSSIIcon(reading.rssi)} {reading.rssi} dBm

@@ -50,7 +50,7 @@ const initialState: RFIDState = {
   },
   stats: {
     totalTags: 0,
-    uniqueTags: 0,
+    uniqueTIDs: 0,
     duplicateTags: 0,
     piecesLoaded: 0,
   },
@@ -134,14 +134,14 @@ function rfidReducer(state: RFIDState, action: RFIDAction): RFIDState {
 
     case 'UPDATE_STATS':
       const totalTags = state.tags.length;
-      const uniqueTags = new Set(state.tags.map(tag => tag.epc)).size;
-      const duplicateTags = totalTags - uniqueTags;
+      const uniqueTIDs = new Set(state.tags.map(tag => tag.tid || tag.epc)).size;
+      const duplicateTags = totalTags - uniqueTIDs;
       
       return {
         ...state,
         stats: {
           totalTags,
-          uniqueTags,
+          uniqueTIDs,
           duplicateTags,
           piecesLoaded: state.pieces.length,
         },

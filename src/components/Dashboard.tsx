@@ -84,7 +84,7 @@ export default function Dashboard() {
             />
             <StatsPanel 
               totalReadings={status.totalReadings}
-              uniqueEPCs={status.uniqueEPCs || 0}
+              uniqueTIDs={status.uniqueTIDs || 0}
               isConnected={status.isConnected}
               isReading={status.isReading}
               readings={readings}
@@ -120,7 +120,7 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-              <span>Tags: {new Set(readings.map(r => r.epc)).size} únicas</span>
+              <span>TIDs: {new Set(readings.map(r => r.tid || r.epc)).size} únicos</span>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { API_CONFIG } from '../config/api';
 
 // Interfaces para o protocolo correto descoberto
 interface RFIDReaderConfig {
@@ -13,6 +14,7 @@ interface RFIDReaderConfig {
 interface RFIDReading {
   id: number;
   epc: string;
+  tid?: string;
   rssi: number;
   antenna: number;
   timestamp: string;
@@ -23,7 +25,7 @@ interface ConnectionStatus {
   isConnected: boolean;
   isReading: boolean;
   totalReadings: number;
-  uniqueEPCs: number;
+  uniqueTIDs: number;
 }
 
 export function useRFIDReader() {
@@ -41,7 +43,7 @@ export function useRFIDReader() {
     isConnected: false,
     isReading: false,
     totalReadings: 0,
-    uniqueEPCs: 0
+    uniqueTIDs: 0
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,7 @@ export function useRFIDReader() {
   // Conectar ao servidor backend
   useEffect(() => {
     console.log('🔌 Conectando ao servidor backend...');
-    const socket = io('http://localhost:3001');
+    const socket = io(API_CONFIG.BASE_URL);
     socketRef.current = socket;
 
     // Eventos de conexão
@@ -87,10 +89,14 @@ export function useRFIDReader() {
       }
     });
 
-    socket.on('readings-update', (data: { readings: RFIDReading[], totalReadings: number }) => {
+    socket.on('readings-update', (data: { readings: RFIDReading[], totalReadings: number, uniqueTIDs?: number }) => {
       console.log('📊 Atualização de leituras:', data);
       setReadings(data.readings);
-      setStatus(current => ({ ...current, totalReadings: data.totalReadings }));
+      setStatus(current => ({ 
+        ...current, 
+        totalReadings: data.totalReadings,
+        uniqueTIDs: data.uniqueTIDs || 0
+      }));
     });
 
     // Eventos de erro

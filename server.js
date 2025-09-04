@@ -44,7 +44,8 @@ let rfidConfig = {
   port: 8888,
   power: 20,
   antennas: [1, 2, 3, 4],
-  soundEnabled: true
+  soundEnabled: true,
+  matchSoundEnabled: true // Som para correspondências UHF
 };
 
 const PORT = 3001;
@@ -172,6 +173,45 @@ async function connectToRFIDReader() {
           totalReadings++;
           if (readings.length > MAX_READINGS_HISTORY) {
             readings = readings.slice(-MAX_READINGS_HISTORY);
+          }
+
+          // Verificar se TID corresponde a UHF da planilha
+          let matchedItem = null;
+          if (tidValue && excelData.length > 0) {
+            matchedItem = excelData.find(item => {
+              // Buscar por coluna UHF (case-insensitive)
+              const uhfColumn = Object.keys(item).find(key => 
+                key.toLowerCase().includes('uhf') || 
+                key.toLowerCase().includes('uhf') ||
+                key.toLowerCase() === 'uhf'
+              );
+              
+              if (uhfColumn && item[uhfColumn]) {
+                const itemUHF = String(item[uhfColumn]).toUpperCase().trim();
+                const tidClean = tidValue.toUpperCase().trim();
+                
+                // Log para debug
+                console.log(`🔍 Comparando: "${itemUHF}" === "${tidClean}"`);
+                
+                return itemUHF === tidClean;
+              }
+              return false;
+            });
+          }
+
+          // Se encontrou correspondência, emitir evento especial
+          if (matchedItem) {
+            console.log(`🎯 CORRESPONDÊNCIA ENCONTRADA!`);
+            console.log(`  📋 TID: ${tidValue}`);
+            console.log(`  📦 Item: ${JSON.stringify(matchedItem)}`);
+            console.log(`  📡 Antena: ${reading.antenna}`);
+            
+            // Emitir evento de correspondência
+            io.emit('rfid-match-found', {
+              reading: reading,
+              item: matchedItem,
+              timestamp: new Date().toISOString()
+            });
           }
 
           io.emit('rfid-reading', reading);

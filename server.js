@@ -36,10 +36,11 @@ let uniqueTIDs = new Set(); // Contar TIDs únicos
 let readings = []; // Array de leituras para histórico
 let receiverAttached = false;
 
-// Keep-alive e verificação de conexão para PORTAL (não pode parar de ler)
-const KEEP_ALIVE_INTERVAL = 5000; // 5 segundos - muito agressivo para portal
-const MAX_INACTIVITY_TIME = 10000; // 10 segundos - tempo máximo sem leitura
-const CONNECTION_CHECK_INTERVAL = 2000; // 2 segundos - verificação muito frequente
+// Keep-alive e verificação de conexão para PORTAL (otimizado para memória)
+const KEEP_ALIVE_INTERVAL = 15000; // 15 segundos - balanceado
+const MAX_INACTIVITY_TIME = 30000; // 30 segundos - tempo razoável
+const CONNECTION_CHECK_INTERVAL = 10000; // 10 segundos - menos frequente
+const MAX_READINGS_HISTORY = 50; // Reduzir histórico para economizar memória
 let keepAliveInterval = null;
 let connectionCheckInterval = null;
 let lastActivityTime = null;
@@ -79,8 +80,8 @@ function connectToRFIDReader() {
 
           readings.push(reading);
           totalReadings++;
-          if (readings.length > 100) {
-            readings = readings.slice(-100);
+          if (readings.length > MAX_READINGS_HISTORY) {
+            readings = readings.slice(-MAX_READINGS_HISTORY);
           }
 
           io.emit('rfid-reading', reading);
@@ -110,27 +111,25 @@ function startKeepAlive() {
     clearInterval(keepAliveInterval);
   }
   
-  keepAliveInterval = setInterval(async () => {
+  keepAliveInterval = setInterval(() => {
     if (isConnected && isReading) {
       try {
-        // Keep-alive para PORTAL - verificação rápida sem parar leitura
-        console.log('💓 Verificando conexão RFID (PORTAL ATIVO)...');
+        // Keep-alive otimizado - apenas verificação simples sem logs excessivos
+        lastActivityTime = Date.now();
         
-        // Para portal, apenas verificar conexão sem parar leitura
-        // Isso mantém a leitura contínua para não perder tags
-        if (isConnected) {
-          lastActivityTime = Date.now();
-          console.log('✅ Conexão RFID verificada - PORTAL funcionando perfeitamente');
+        // Log reduzido para economizar memória (a cada 5 verificações)
+        if (totalReadings % 5 === 0) {
+          console.log('💓 Keep-alive RFID - Portal ativo');
         }
       } catch (error) {
         console.log('⚠️ Erro na verificação (não crítico):', error.message);
         // Tentar reconectar se houver erro
-        await handleConnectionLoss();
+        handleConnectionLoss();
       }
     }
   }, KEEP_ALIVE_INTERVAL);
   
-  console.log('🔄 Sistema de keep-alive para PORTAL iniciado (5s) - LEITURA CONTÍNUA');
+  console.log('🔄 Keep-alive otimizado iniciado (15s) - Economia de memória');
 }
 
 // Verificação periódica da conexão
@@ -154,7 +153,7 @@ function startConnectionCheck() {
     }
   }, CONNECTION_CHECK_INTERVAL);
   
-  console.log('🔍 Verificação de conexão para PORTAL iniciada (2s) - SUPERVISÃO CONTÍNUA');
+  console.log('🔍 Verificação de conexão otimizada iniciada (10s)');
 }
 
 // Tratar perda de conexão
@@ -443,6 +442,24 @@ app.post('/api/stop-reading', (req, res) => {
   stopContinuousReading();
   res.json({ success: true, message: 'Leitura parada' });
 });
+
+// Limpeza periódica de memória
+function cleanupMemory() {
+  // Limpar arrays antigos
+  if (readings.length > MAX_READINGS_HISTORY * 2) {
+    readings = readings.slice(-MAX_READINGS_HISTORY);
+    console.log('🧹 Memória limpa - histórico reduzido');
+  }
+  
+  // Forçar garbage collection se disponível
+  if (global.gc) {
+    global.gc();
+    console.log('🗑️ Garbage collection executado');
+  }
+}
+
+// Limpeza a cada 5 minutos
+setInterval(cleanupMemory, 300000);
 
 // Tratamento de encerramento
 process.on('SIGINT', () => {

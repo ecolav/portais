@@ -36,10 +36,10 @@ let uniqueTIDs = new Set(); // Contar TIDs únicos
 let readings = []; // Array de leituras para histórico
 let receiverAttached = false;
 
-// Keep-alive e verificação de conexão para PORTAL (otimizado para memória)
-const KEEP_ALIVE_INTERVAL = 15000; // 15 segundos - balanceado
-const MAX_INACTIVITY_TIME = 30000; // 30 segundos - tempo razoável
-const CONNECTION_CHECK_INTERVAL = 10000; // 10 segundos - menos frequente
+// Keep-alive e verificação de conexão para PORTAL (sempre ativo)
+const KEEP_ALIVE_INTERVAL = 30000; // 30 segundos - apenas verificação
+const MAX_INACTIVITY_TIME = 60000; // 60 segundos - tempo razoável
+const CONNECTION_CHECK_INTERVAL = 10000; // 10 segundos - verificação
 const MAX_READINGS_HISTORY = 50; // Reduzir histórico para economizar memória
 const READING_HEALTH_CHECK_INTERVAL = 20000; // 20 segundos - verificar se está lendo
 let keepAliveInterval = null;
@@ -101,6 +101,14 @@ function connectToRFIDReader() {
       startConnectionCheck();
       startReadingHealthCheck();
       
+      // SEMPRE iniciar leitura automaticamente após conectar
+      try {
+        await startContinuousReading();
+        console.log('🚀 Leitura iniciada automaticamente após conexão');
+      } catch (startError) {
+        console.log('⚠️ Erro ao iniciar leitura automática:', startError.message);
+      }
+      
       resolve();
     } catch (error) {
       console.error(`❌ Erro na conexão RFID (${rfidConfig.ip}:${rfidConfig.port}):`, error.message || error);
@@ -119,22 +127,22 @@ function startKeepAlive() {
   keepAliveInterval = setInterval(() => {
     if (isConnected && isReading) {
       try {
-        // Keep-alive otimizado - apenas verificação simples sem logs excessivos
+        // Keep-alive simples - apenas verificação sem parar leitura
         lastActivityTime = Date.now();
         
-        // Log reduzido para economizar memória (a cada 5 verificações)
-        if (totalReadings % 5 === 0) {
-          console.log('💓 Keep-alive RFID - Portal ativo');
+        // Log reduzido para economizar memória (a cada 10 verificações)
+        if (totalReadings % 10 === 0) {
+          console.log('💓 Keep-alive RFID - Portal sempre ativo');
         }
       } catch (error) {
-        console.log('⚠️ Erro na verificação (não crítico):', error.message);
+        console.log('⚠️ Erro keep-alive:', error.message);
         // Tentar reconectar se houver erro
         handleConnectionLoss();
       }
     }
   }, KEEP_ALIVE_INTERVAL);
   
-  console.log('🔄 Keep-alive otimizado iniciado (15s) - Economia de memória');
+  console.log('🔄 Keep-alive simples iniciado (30s) - Portal sempre ativo');
 }
 
 // Verificação periódica da conexão
@@ -226,9 +234,18 @@ async function handleConnectionLoss() {
     // Tentar reconectar
     await connectToRFIDReader();
     
-    // Se reconectou com sucesso, reiniciar leitura se estava lendo antes
+    // Se reconectou com sucesso, SEMPRE iniciar leitura automaticamente
     if (isConnected) {
-      console.log('✅ Reconexão bem-sucedida!');
+      console.log('✅ Reconexão bem-sucedida! Iniciando leitura automaticamente...');
+      
+      // SEMPRE iniciar leitura após reconectar
+      try {
+        await startContinuousReading();
+        console.log('🚀 Leitura iniciada automaticamente após reconexão');
+      } catch (startError) {
+        console.log('⚠️ Erro ao iniciar leitura automática:', startError.message);
+      }
+      
       // Emitir status atualizado
       io.emit('connection-status', { 
         isConnected: true,
@@ -464,11 +481,24 @@ app.post('/api/config', async (req, res) => {
       console.log('🔄 Reconectando com nova configuração...');
       try {
         await disconnectFromRFIDReader();
-        // NÃO iniciar leitura automaticamente - deixar o usuário decidir
-        console.log('✅ Desconectado. Use "Conectar" para conectar ao novo IP.');
+        
+        // SEMPRE reconectar e iniciar leitura automaticamente após trocar IP
+        console.log('🔄 Reconectando automaticamente com nova configuração...');
+        try {
+          await connectToRFIDReader();
+          console.log('✅ Reconectado e leitura iniciada automaticamente com novo IP!');
+        } catch (reconnectError) {
+          console.log('⚠️ Erro na reconexão automática:', reconnectError.message);
+        }
       } catch (disconnectError) {
         console.log('⚠️ Erro na desconexão (não crítico):', disconnectError.message);
-        // Continuar mesmo com erro de desconexão
+        // Tentar reconectar mesmo com erro
+        try {
+          await connectToRFIDReader();
+          console.log('✅ Reconectado após erro na desconexão!');
+        } catch (reconnectError) {
+          console.log('❌ Falha na reconexão:', reconnectError.message);
+        }
       }
     }
     
@@ -482,7 +512,8 @@ app.post('/api/config', async (req, res) => {
 app.post('/api/connect', async (req, res) => {
   try {
     await connectToRFIDReader();
-    res.json({ success: true, message: 'Conectado ao leitor RFID' });
+    // A leitura já é iniciada automaticamente na função connectToRFIDReader
+    res.json({ success: true, message: 'Conectado e leitura iniciada automaticamente' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -498,9 +529,27 @@ app.post('/api/start-reading', (req, res) => {
   res.json({ success: true, message: 'Leitura iniciada' });
 });
 
-app.post('/api/stop-reading', (req, res) => {
-  stopContinuousReading();
-  res.json({ success: true, message: 'Leitura parada' });
+app.post('/api/stop-reading', async (req, res) => {
+  try {
+    await stopContinuousReading();
+    
+    // SEMPRE reiniciar leitura automaticamente após parar (para portal)
+    if (isConnected) {
+      console.log('🔄 Reiniciando leitura automaticamente após parada...');
+      try {
+        await startContinuousReading();
+        console.log('🚀 Leitura reiniciada automaticamente');
+        res.json({ success: true, message: 'Leitura parada e reiniciada automaticamente' });
+      } catch (restartError) {
+        console.log('⚠️ Erro ao reiniciar leitura:', restartError.message);
+        res.json({ success: true, message: 'Leitura parada, mas falha ao reiniciar' });
+      }
+    } else {
+      res.json({ success: true, message: 'Leitura parada' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
 // Limpeza periódica de memória

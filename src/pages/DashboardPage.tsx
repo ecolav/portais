@@ -1,15 +1,12 @@
 import { useRFIDReader } from '../hooks/useRFIDReader';
-import ReaderConfigPanel from './panels/ReaderConfigPanel';
-import ControlPanel from './panels/ControlPanel';
-import RFIDReadingsPanel from './panels/RFIDReadingsPanel';
-import StatsPanel from './panels/StatsPanel';
-import ExcelUploadPanel from './panels/ExcelUploadPanel';
-import AudioConfigPanel from './panels/AudioConfigPanel';
-import CameraConfigPanel from './panels/CameraConfigPanel';
-import NotificationMethodPanel from './panels/NotificationMethodPanel';
-import RFIDMatchesPanel from './panels/RFIDMatchesPanel';
+import ReaderConfigPanel from '../components/panels/ReaderConfigPanel';
+import ControlPanel from '../components/panels/ControlPanel';
+import StatsPanel from '../components/panels/StatsPanel';
+import AudioConfigPanel from '../components/panels/AudioConfigPanel';
+import CameraConfigPanel from '../components/panels/CameraConfigPanel';
+import NotificationMethodPanel from '../components/panels/NotificationMethodPanel';
 
-export default function Dashboard() {
+export default function DashboardPage() {
   const {
     config,
     readings,
@@ -31,10 +28,10 @@ export default function Dashboard() {
         {/* Cabeçalho */}
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Portal RFID - Sistema Atualizado
+            Dashboard - Controle do Sistema
           </h1>
           <p className="text-gray-600">
-            Leitor Chainway com protocolo A5 5A - IP: {config.ip}:{config.port}
+            Configure, controle e monitore o sistema RFID
           </p>
         </div>
 
@@ -57,10 +54,10 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Grid Principal */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Coluna Esquerda - Configuração e Controle */}
-          <div className="space-y-6">
+        {/* Seção 1: Configuração e Controle do Leitor */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">📡 Leitor RFID</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ReaderConfigPanel 
               config={config} 
               onConfigChange={updateConfig} 
@@ -75,36 +72,28 @@ export default function Dashboard() {
               onClearReadings={clearReadings}
             />
           </div>
-
-          {/* Coluna Central - Leituras e Estatísticas */}
-          <div className="space-y-6">
-            <RFIDReadingsPanel 
-              readings={readings} 
-              onClearReadings={clearReadings} 
-            />
-            <StatsPanel 
-              totalReadings={status.totalReadings}
-              uniqueTIDs={status.uniqueTIDs || 0}
-              isConnected={status.isConnected}
-              isReading={status.isReading}
-              readings={readings}
-            />
-          </div>
-
-          {/* Coluna de Correspondências - Mais Larga */}
-          <div className="lg:col-span-2">
-            <RFIDMatchesPanel />
-          </div>
         </div>
 
-        {/* Segunda Linha - Configurações Adicionais */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <ExcelUploadPanel />
-          <AudioConfigPanel 
-            soundEnabled={config.soundEnabled}
-            onSoundToggle={(enabled) => updateConfig({ soundEnabled: enabled })}
+        {/* Seção 2: Estatísticas e Status */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">📊 Estatísticas do Sistema</h2>
+          <StatsPanel 
+            totalReadings={status.totalReadings}
+            uniqueTIDs={status.uniqueTIDs || 0}
+            isConnected={status.isConnected}
+            isReading={status.isReading}
+            readings={readings}
           />
-          <div className="space-y-6">
+        </div>
+
+        {/* Seção 3: Configurações do Sistema */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">⚙️ Configurações do Sistema</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <AudioConfigPanel 
+              soundEnabled={config.soundEnabled}
+              onSoundToggle={(enabled) => updateConfig({ soundEnabled: enabled })}
+            />
             <CameraConfigPanel />
             <NotificationMethodPanel />
           </div>

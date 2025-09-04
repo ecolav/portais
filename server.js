@@ -1319,6 +1319,14 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('test-match', (matchData) => {
+    console.log('🧪 Teste de correspondência recebido:', matchData);
+    
+    // Emitir evento de correspondência para teste
+    io.emit('rfid-match-found', matchData);
+    console.log('📡 Evento rfid-match-found emitido para teste');
+  });
+
   socket.on('disconnect', () => {
     console.log('🔌 Cliente desconectado:', socket.id);
   });

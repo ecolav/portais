@@ -42,6 +42,7 @@ const MAX_INACTIVITY_TIME = 60000; // 60 segundos - tempo razoável
 const CONNECTION_CHECK_INTERVAL = 10000; // 10 segundos - verificação
 const MAX_READINGS_HISTORY = 50; // Reduzir histórico para economizar memória
 const READING_HEALTH_CHECK_INTERVAL = 20000; // 20 segundos - verificar se está lendo
+const AUTO_RESTART_INTERVAL = 40000; // 40 segundos - parar e reiniciar leitura automaticamente
 
 // Monitoramento de memória e saúde do sistema
 const MEMORY_CHECK_INTERVAL = 60000; // 60 segundos
@@ -52,6 +53,7 @@ let keepAliveInterval = null;
 let connectionCheckInterval = null;
 let readingHealthCheckInterval = null;
 let memoryCheckInterval = null;
+let autoRestartInterval = null;
 let lastActivityTime = null;
 let lastReadingTime = null;
 let connectionAttempts = 0;
@@ -254,6 +256,7 @@ async function connectToRFIDReader() {
     startKeepAlive();
     startConnectionCheck();
     startReadingHealthCheck();
+    startAutoRestart(); // Iniciar auto-restart da leitura
     startMemoryCheck(); // Iniciar monitoramento de memória
     
     // NÃO iniciar leitura automaticamente - apenas conectar
@@ -273,28 +276,57 @@ function startKeepAlive() {
   }
   
   keepAliveInterval = setInterval(async () => {
-    if (isConnected) {
-      try {
-        // Apenas verificar se leitor está respondendo - NÃO enviar comandos de leitura
-        console.log('🔌 Verificando se leitor está respondendo...');
-        
-        // NÃO enviar startScan - apenas verificar conexão
-        // O leitor já está lendo ou pausado pelo usuário
-        
-        // Atualizar apenas lastActivityTime, NÃO lastReadingTime
-        lastActivityTime = Date.now();
-        // NÃO atualizar lastReadingTime aqui para evitar interferir na verificação de saúde
-        
-        console.log('💓 Keep-alive RFID - Conexão verificada');
-      } catch (error) {
-        console.log('⚠️ Erro keep-alive:', error.message);
-        // Tentar reconectar se houver erro
-        handleConnectionLoss();
+    try {
+      console.log('🔌 Keep-alive: Verificando e mantendo leitor ativo...');
+      
+      // SEMPRE conectar e iniciar leitura a cada 30 segundos
+      if (!isConnected) {
+        console.log('  🔌 Leitor desconectado - reconectando...');
+        try {
+          await connectToRFIDReader();
+          console.log('  ✅ Reconectado com sucesso');
+        } catch (connectError) {
+          console.log('  ❌ Falha na reconexão:', connectError.message);
+          return;
+        }
       }
+      
+      // SEMPRE iniciar leitura se não estiver lendo
+      if (!isReading) {
+        console.log('  🟢 Leitura parada - iniciando automaticamente...');
+        try {
+          await startContinuousReading();
+          console.log('  ✅ Leitura iniciada automaticamente');
+        } catch (startError) {
+          console.log('  ❌ Falha ao iniciar leitura:', startError.message);
+        }
+      } else {
+        console.log('  📡 Leitura já está ativa - verificando saúde...');
+        
+        // Verificar se recebeu dados recentemente
+        if (lastReadingTime && (Date.now() - lastReadingTime) > 30000) { // 30 segundos
+          console.log('  ⚠️ Leitura ativa mas sem dados recentes - reiniciando...');
+          try {
+            await startContinuousReading();
+            console.log('  ✅ Leitura reiniciada com sucesso');
+          } catch (restartError) {
+            console.log('  ❌ Falha ao reiniciar leitura:', restartError.message);
+          }
+        } else {
+          console.log('  ✅ Leitura funcionando normalmente');
+        }
+      }
+      
+      // Atualizar tempo de atividade
+      lastActivityTime = Date.now();
+      console.log('💓 Keep-alive RFID - Leitor mantido ativo');
+      
+    } catch (error) {
+      console.log('⚠️ Erro no keep-alive:', error.message);
     }
   }, KEEP_ALIVE_INTERVAL);
   
-  console.log('🔄 Keep-alive iniciado (30s) - Apenas verificação de conexão');
+  console.log('🔄 Keep-alive iniciado (30s) - SEMPRE mantém leitor ativo e lendo');
 }
 
 // Verificação periódica da conexão
@@ -349,18 +381,29 @@ function startReadingHealthCheck() {
         
         // Verificar se está lendo há muito tempo sem receber dados
         if (lastReadingTime && (Date.now() - lastReadingTime) > 45000) { // 45 segundos
-          console.log('⚠️ Leitura parou de funcionar - mas NÃO reiniciando automaticamente');
-          console.log('ℹ️ Use "Iniciar Leitura" no frontend para reiniciar manualmente');
+          console.log('⚠️ Health Check: Leitura parou de funcionar');
           console.log(`  📊 Status atual: isReading=${isReading}, lastReadingTime=${lastReadingTime ? new Date(lastReadingTime).toISOString() : 'null'}`);
           
-          // NÃO reiniciar automaticamente - deixar controle manual
-          // Apenas atualizar tempos para evitar spam de logs
+          // O keep-alive vai cuidar de reconectar e reiniciar automaticamente
+          console.log('  ℹ️ Keep-alive vai reconectar e reiniciar automaticamente em até 30s');
+          
+          // Atualizar apenas lastActivityTime
           lastActivityTime = Date.now();
-          // NÃO atualizar lastReadingTime aqui para evitar loop
         }
         
         // Log de status para debug
         console.log(`  📊 Status da leitura: isReading=${isReading}, lastReadingTime=${lastReadingTime ? new Date(lastReadingTime).toISOString() : 'null'}`);
+        
+        // Monitoramento simples de saúde
+        if (isReading && lastReadingTime) {
+          const timeSinceLastReading = Date.now() - lastReadingTime;
+          const minutesSinceLastReading = Math.floor(timeSinceLastReading / 60000);
+          
+          if (minutesSinceLastReading >= 1) {
+            console.log(`  ⏰ Health Check: Sem leituras há ${minutesSinceLastReading} minuto(s)`);
+            console.log(`  ℹ️ Keep-alive vai resolver automaticamente em até 30s`);
+          }
+        }
         
         // Atualizar apenas lastActivityTime, NÃO lastReadingTime
         lastActivityTime = Date.now();
@@ -372,6 +415,46 @@ function startReadingHealthCheck() {
   }, READING_HEALTH_CHECK_INTERVAL);
   
   console.log('📊 Health check de leitura RFID iniciado (20s) - Apenas verificação de saúde');
+}
+
+// Sistema de auto-restart da leitura a cada 40 segundos
+function startAutoRestart() {
+  if (autoRestartInterval) {
+    clearInterval(autoRestartInterval);
+  }
+  
+  autoRestartInterval = setInterval(async () => {
+    if (isConnected && isReading) {
+      try {
+        console.log('🔄 Auto-restart: Parando e reiniciando leitura automaticamente...');
+        
+        // Parar leitura (como o botão "Parar Leitura")
+        console.log('  🛑 Parando leitura...');
+        await chainwayApi.stopScan();
+        isReading = false;
+        console.log('  ✅ Leitura parada');
+        
+        // Aguardar um pouco para estabilizar
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Reiniciar leitura (como o botão "Iniciar Leitura")
+        console.log('  🟢 Reiniciando leitura...');
+        await chainwayApi.startScan();
+        isReading = true;
+        lastReadingTime = Date.now();
+        console.log('  ✅ Leitura reiniciada');
+        
+        console.log('🔄 Auto-restart concluído com sucesso');
+        
+      } catch (error) {
+        console.error('❌ Erro no auto-restart:', error.message);
+        // Se falhar, tentar manter o status atual
+        isReading = false;
+      }
+    }
+  }, AUTO_RESTART_INTERVAL);
+  
+  console.log('🔄 Auto-restart iniciado (40s) - Para e reinicia leitura automaticamente');
 }
 
 // Função para aplicar potência em tempo real
@@ -491,6 +574,10 @@ function gracefulShutdown(reason) {
     clearInterval(readingHealthCheckInterval);
     readingHealthCheckInterval = null;
   }
+  if (autoRestartInterval) {
+    clearInterval(autoRestartInterval);
+    autoRestartInterval = null;
+  }
   if (memoryCheckInterval) {
     clearInterval(memoryCheckInterval);
     memoryCheckInterval = null;
@@ -577,6 +664,10 @@ async function handleConnectionLoss() {
     if (readingHealthCheckInterval) {
       clearInterval(readingHealthCheckInterval);
       readingHealthCheckInterval = null;
+    }
+    if (autoRestartInterval) {
+      clearInterval(autoRestartInterval);
+      autoRestartInterval = null;
     }
     if (memoryCheckInterval) {
       clearInterval(memoryCheckInterval);
@@ -704,6 +795,11 @@ async function disconnectFromRFIDReader() {
       readingHealthCheckInterval = null;
       console.log('📊 Health check de leitura parado');
     }
+    if (autoRestartInterval) {
+      clearInterval(autoRestartInterval);
+      autoRestartInterval = null;
+      console.log('🔄 Auto-restart parado');
+    }
     if (memoryCheckInterval) {
       clearInterval(memoryCheckInterval);
       memoryCheckInterval = null;
@@ -752,6 +848,10 @@ async function disconnectFromRFIDReader() {
     if (readingHealthCheckInterval) {
       clearInterval(readingHealthCheckInterval);
       readingHealthCheckInterval = null;
+    }
+    if (autoRestartInterval) {
+      clearInterval(autoRestartInterval);
+      autoRestartInterval = null;
     }
     if (memoryCheckInterval) {
       clearInterval(memoryCheckInterval);

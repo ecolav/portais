@@ -66,6 +66,11 @@ let excelMetadata = {
   columns: []
 };
 
+// Configurações para processamento por lotes
+const EXCEL_BATCH_SIZE = 1000; // Processar 1000 linhas por vez
+const MAX_EXCEL_ITEMS = 50000; // Máximo de 50k itens na memória
+const EXCEL_MEMORY_CHECK_INTERVAL = 30000; // Verificar memória a cada 30s
+
 // Keep-alive e verificação de conexão para PORTAL (sempre ativo)
 const KEEP_ALIVE_INTERVAL = 30000; // 30 segundos - apenas verificação
 const MAX_INACTIVITY_TIME = 60000; // 60 segundos - tempo razoável
@@ -487,8 +492,8 @@ function startAutoRestart() {
   console.log('🔄 Auto-restart iniciado (40s) - Para e reinicia leitura automaticamente');
 }
 
-// Função para processar planilha Excel
-function processExcelFile(buffer, fileName) {
+// Função para processar planilha Excel por lotes
+async function processExcelFile(buffer, fileName) {
   try {
     console.log(`📊 Processando planilha: ${fileName}`);
     
@@ -508,11 +513,123 @@ function processExcelFile(buffer, fileName) {
     const headers = jsonData[0];
     const dataRows = jsonData.slice(1);
     
-    // Processar dados
-    const processedData = dataRows.map((row, index) => {
+    console.log(`  📋 Cabeçalhos detectados: ${headers.join(', ')}`);
+    console.log(`  📊 Total de linhas de dados: ${dataRows.length}`);
+    
+    // Verificar se precisa processar por lotes
+    if (dataRows.length > EXCEL_BATCH_SIZE) {
+      console.log(`  🔄 Planilha grande detectada (${dataRows.length} linhas)`);
+      console.log(`  📦 Processando em lotes de ${EXCEL_BATCH_SIZE} linhas...`);
+      
+      return await processExcelInBatches(dataRows, headers, fileName);
+    } else {
+      console.log(`  ⚡ Planilha pequena, processando de uma vez...`);
+      return processExcelAllAtOnce(dataRows, headers, fileName);
+    }
+    
+  } catch (error) {
+    console.error('❌ Erro ao processar planilha:', error.message);
+    throw error;
+  }
+}
+
+// Função para processar planilha pequena de uma vez
+function processExcelAllAtOnce(dataRows, headers, fileName) {
+  console.log(`  🚀 Processando ${dataRows.length} linhas de uma vez...`);
+  
+  // Processar dados
+  const processedData = dataRows.map((row, index) => {
+    const item = {
+      id: index + 1,
+      row: index + 2
+    };
+    
+    // Adicionar cada coluna
+    headers.forEach((header, colIndex) => {
+      if (header && row[colIndex] !== undefined) {
+        item[header] = row[colIndex];
+      }
+    });
+    
+    return item;
+  }).filter(item => {
+    // Filtrar linhas vazias
+    const hasData = Object.values(item).some(value => 
+      value !== undefined && value !== null && value !== ''
+    );
+    return hasData;
+  });
+  
+  // Atualizar dados globais
+  excelData = processedData;
+  excelMetadata = {
+    fileName: fileName,
+    uploadDate: new Date().toISOString(),
+    totalItems: processedData.length,
+    columns: headers
+  };
+  
+  console.log(`✅ Planilha processada com sucesso:`);
+  console.log(`  📁 Arquivo: ${fileName}`);
+  console.log(`  📊 Total de itens: ${processedData.length}`);
+  console.log(`  📋 Colunas: ${headers.join(', ')}`);
+  
+  // Emitir atualização para todos os clientes
+  io.emit('excel-data-updated', {
+    data: excelData,
+    metadata: excelMetadata
+  });
+  
+  return {
+    success: true,
+    data: processedData,
+    metadata: excelMetadata,
+    processedInBatches: false
+  };
+}
+
+// Função para processar planilha grande por lotes
+async function processExcelInBatches(dataRows, headers, fileName) {
+  console.log(`  📦 Iniciando processamento por lotes...`);
+  
+  // Limpar dados existentes
+  excelData = [];
+  
+  // Atualizar metadados iniciais
+  excelMetadata = {
+    fileName: fileName,
+    uploadDate: new Date().toISOString(),
+    totalItems: dataRows.length,
+    columns: headers,
+    processingStatus: 'processing',
+    processedBatches: 0,
+    totalBatches: Math.ceil(dataRows.length / EXCEL_BATCH_SIZE)
+  };
+  
+  // Emitir status inicial
+  io.emit('excel-processing-started', {
+    fileName: fileName,
+    totalRows: dataRows.length,
+    batchSize: EXCEL_BATCH_SIZE,
+    totalBatches: excelMetadata.totalBatches
+  });
+  
+  let processedCount = 0;
+  const totalBatches = Math.ceil(dataRows.length / EXCEL_BATCH_SIZE);
+  
+  // Processar por lotes
+  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+    const startIndex = batchIndex * EXCEL_BATCH_SIZE;
+    const endIndex = Math.min(startIndex + EXCEL_BATCH_SIZE, dataRows.length);
+    const batchRows = dataRows.slice(startIndex, endIndex);
+    
+    console.log(`  📦 Processando lote ${batchIndex + 1}/${totalBatches} (linhas ${startIndex + 1}-${endIndex})`);
+    
+    // Processar lote atual
+    const batchData = batchRows.map((row, index) => {
       const item = {
-        id: index + 1,
-        row: index + 2 // +2 porque index começa em 0 e primeira linha é cabeçalho
+        id: processedCount + index + 1,
+        row: startIndex + index + 2
       };
       
       // Adicionar cada coluna
@@ -531,36 +648,68 @@ function processExcelFile(buffer, fileName) {
       return hasData;
     });
     
-    // Atualizar dados globais
-    excelData = processedData;
-    excelMetadata = {
-      fileName: fileName,
-      uploadDate: new Date().toISOString(),
-      totalItems: processedData.length,
-      columns: headers
-    };
+    // Adicionar lote aos dados
+    excelData.push(...batchData);
+    processedCount += batchData.length;
     
-    console.log(`✅ Planilha processada com sucesso:`);
-    console.log(`  📁 Arquivo: ${fileName}`);
-    console.log(`  📊 Total de itens: ${processedData.length}`);
-    console.log(`  📋 Colunas: ${headers.join(', ')}`);
+    // Atualizar metadados
+    excelMetadata.processedBatches = batchIndex + 1;
+    excelMetadata.totalItems = processedCount;
     
-    // Emitir atualização para todos os clientes
-    io.emit('excel-data-updated', {
-      data: excelData,
-      metadata: excelMetadata
+    // Emitir progresso
+    io.emit('excel-processing-progress', {
+      batchIndex: batchIndex + 1,
+      totalBatches: totalBatches,
+      processedRows: processedCount,
+      totalRows: dataRows.length,
+      progress: Math.round((processedCount / dataRows.length) * 100)
     });
     
-    return {
-      success: true,
-      data: processedData,
-      metadata: excelMetadata
-    };
+    // Verificar memória a cada lote
+    if (excelData.length > MAX_EXCEL_ITEMS) {
+      console.log(`  ⚠️ Limite de memória atingido (${excelData.length} > ${MAX_EXCEL_ITEMS})`);
+      console.log(`  🧹 Limpando dados antigos...`);
+      
+      // Manter apenas os últimos itens
+      excelData = excelData.slice(-MAX_EXCEL_ITEMS);
+      console.log(`  ✅ Memória limpa, mantidos ${excelData.length} itens`);
+    }
     
-  } catch (error) {
-    console.error('❌ Erro ao processar planilha:', error.message);
-    throw error;
+    // Pausa pequena para não travar o servidor
+    if (batchIndex < totalBatches - 1) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
   }
+  
+  // Finalizar processamento
+  excelMetadata.processingStatus = 'completed';
+  excelMetadata.totalItems = excelData.length;
+  
+  console.log(`✅ Planilha processada por lotes com sucesso:`);
+  console.log(`  📁 Arquivo: ${fileName}`);
+  console.log(`  📊 Total de itens: ${excelData.length}`);
+  console.log(`  📦 Lotes processados: ${totalBatches}`);
+  console.log(`  📋 Colunas: ${headers.join(', ')}`);
+  
+  // Emitir conclusão
+  io.emit('excel-processing-completed', {
+    data: excelData,
+    metadata: excelMetadata
+  });
+  
+  // Emitir atualização normal
+  io.emit('excel-data-updated', {
+    data: excelData,
+    metadata: excelMetadata
+  });
+  
+  return {
+    success: true,
+    data: excelData,
+    metadata: excelMetadata,
+    processedInBatches: true,
+    totalBatches: totalBatches
+  };
 }
 
 // Função para buscar itens na planilha
@@ -1354,6 +1503,39 @@ function cleanupMemory() {
 // Limpeza a cada 5 minutos
 setInterval(cleanupMemory, 300000);
 
+// Monitoramento de memória para Excel
+setInterval(() => {
+  try {
+    if (excelData.length > MAX_EXCEL_ITEMS) {
+      console.log(`⚠️ Excel: Limite de memória atingido (${excelData.length} > ${MAX_EXCEL_ITEMS})`);
+      console.log(`🧹 Limpando dados antigos do Excel...`);
+      
+      // Manter apenas os últimos itens
+      const itemsToKeep = Math.floor(MAX_EXCEL_ITEMS * 0.8); // Manter 80%
+      excelData = excelData.slice(-itemsToKeep);
+      
+      // Atualizar metadados
+      excelMetadata.totalItems = excelData.length;
+      
+      console.log(`✅ Excel: Memória limpa, mantidos ${excelData.length} itens`);
+      
+      // Notificar clientes
+      io.emit('excel-memory-cleaned', {
+        totalItems: excelData.length,
+        message: `Memória limpa automaticamente. Mantidos ${excelData.length} itens.`
+      });
+    }
+    
+    // Log de uso de memória
+    const memUsage = process.memoryUsage();
+    const heapUsed = Math.round(memUsage.heapUsed / 1024 / 1024);
+    console.log(`💾 Memória atual: ${heapUsed}MB | Excel: ${excelData.length} itens`);
+    
+  } catch (error) {
+    console.error('❌ Erro no monitoramento de memória Excel:', error.message);
+  }
+}, EXCEL_MEMORY_CHECK_INTERVAL);
+
 // API Routes para sistema de Excel
 app.post('/api/excel/upload', upload.single('file'), async (req, res) => {
   try {
@@ -1366,14 +1548,34 @@ app.post('/api/excel/upload', upload.single('file'), async (req, res) => {
     
     console.log(`📤 Upload recebido: ${req.file.originalname} (${req.file.size} bytes)`);
     
-    // Processar arquivo Excel
-    const result = processExcelFile(req.file.buffer, req.file.originalname);
-    
-    res.json({
-      success: true,
-      message: 'Planilha processada com sucesso',
-      data: result
-    });
+    // Responder imediatamente para planilhas grandes
+    if (req.file.size > 1024 * 1024) { // > 1MB
+      res.json({
+        success: true,
+        message: 'Upload iniciado. Processando planilha em lotes...',
+        processingInBatches: true,
+        fileName: req.file.originalname
+      });
+      
+      // Processar em background
+      processExcelFile(req.file.buffer, req.file.originalname)
+        .catch(error => {
+          console.error('❌ Erro no processamento em background:', error.message);
+          io.emit('excel-processing-error', {
+            fileName: req.file.originalname,
+            error: error.message
+          });
+        });
+    } else {
+      // Processar planilha pequena normalmente
+      const result = await processExcelFile(req.file.buffer, req.file.originalname);
+      
+      res.json({
+        success: true,
+        message: 'Planilha processada com sucesso',
+        data: result
+      });
+    }
     
   } catch (error) {
     console.error('❌ Erro no upload:', error.message);

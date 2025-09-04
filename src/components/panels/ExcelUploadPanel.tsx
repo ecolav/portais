@@ -13,6 +13,9 @@ interface ExcelMetadata {
   uploadDate: string;
   totalItems: number;
   columns: string[];
+  processingStatus?: string;
+  processedBatches?: number;
+  totalBatches?: number;
 }
 
 interface ExcelData {
@@ -41,6 +44,12 @@ const ExcelUploadPanel: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
+  
+  // Estados para processamento por lotes
+  const [isProcessingInBatches, setIsProcessingInBatches] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingStatus, setProcessingStatus] = useState('');
+  const [processingError, setProcessingError] = useState('');
 
   useEffect(() => {
     if (socket) {
@@ -75,6 +84,53 @@ const ExcelUploadPanel: React.FC = () => {
           setSelectedColumns([]);
         }
       });
+      
+      // Eventos para processamento por lotes
+      socket.on('excel-processing-started', (data: { fileName: string; totalRows: number; batchSize: number; totalBatches: number }) => {
+        setIsProcessingInBatches(true);
+        setProcessingProgress(0);
+        setProcessingStatus(`Iniciando processamento de ${data.totalRows} linhas em ${data.totalBatches} lotes...`);
+        setProcessingError('');
+      });
+      
+      socket.on('excel-processing-progress', (data: { batchIndex: number; totalBatches: number; processedRows: number; totalRows: number; progress: number }) => {
+        setProcessingProgress(data.progress);
+        setProcessingStatus(`Processando lote ${data.batchIndex}/${data.totalBatches} - ${data.processedRows}/${data.totalRows} linhas (${data.progress}%)`);
+      });
+      
+      socket.on('excel-processing-completed', (data: ExcelData) => {
+        setIsProcessingInBatches(false);
+        setProcessingProgress(100);
+        setProcessingStatus('Processamento concluído com sucesso!');
+        setExcelData(data);
+        setFilteredData(data.data);
+        setCurrentPage(1);
+        
+        // Limpar status após 3 segundos
+        setTimeout(() => {
+          setProcessingStatus('');
+          setProcessingProgress(0);
+        }, 3000);
+      });
+      
+      socket.on('excel-processing-error', (data: { fileName: string; error: string }) => {
+        setIsProcessingInBatches(false);
+        setProcessingError(`Erro ao processar ${data.fileName}: ${data.error}`);
+        setProcessingStatus('');
+        setProcessingProgress(0);
+        
+        // Limpar erro após 5 segundos
+        setTimeout(() => {
+          setProcessingError('');
+        }, 5000);
+      });
+      
+      socket.on('excel-memory-cleaned', (data: { totalItems: number; message: string }) => {
+        setProcessingStatus(data.message);
+        setTimeout(() => {
+          setProcessingStatus('');
+        }, 3000);
+      });
     }
 
     return () => {
@@ -82,6 +138,11 @@ const ExcelUploadPanel: React.FC = () => {
         socket.off('excel-data-updated');
         socket.off('excel-search-result');
         socket.off('excel-clear-result');
+        socket.off('excel-processing-started');
+        socket.off('excel-processing-progress');
+        socket.off('excel-processing-completed');
+        socket.off('excel-processing-error');
+        socket.off('excel-memory-cleaned');
       }
     };
   }, [socket]);
@@ -91,6 +152,7 @@ const ExcelUploadPanel: React.FC = () => {
     if (!file) return;
 
     setIsUploading(true);
+    setProcessingError('');
     
     try {
       const formData = new FormData();
@@ -104,12 +166,20 @@ const ExcelUploadPanel: React.FC = () => {
       const result = await response.json();
       
       if (result.success) {
-        console.log('✅ Planilha processada com sucesso');
+        if (result.processingInBatches) {
+          console.log('🔄 Upload iniciado, processando em lotes...');
+          setProcessingStatus('Upload concluído. Processando planilha em lotes...');
+        } else {
+          console.log('✅ Planilha processada com sucesso');
+          setProcessingStatus('Planilha processada com sucesso!');
+        }
       } else {
         console.error('❌ Erro ao processar planilha:', result.message);
+        setProcessingError(result.message);
       }
     } catch (error) {
       console.error('❌ Erro no upload:', error);
+      setProcessingError('Erro na conexão com o servidor');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -226,13 +296,46 @@ const ExcelUploadPanel: React.FC = () => {
             
             <button
               onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
+              disabled={isUploading || isProcessingInBatches}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
               {isUploading ? 'Processando...' : 'Selecionar Arquivo'}
             </button>
           </div>
         </div>
+        
+        {/* Barra de Progresso para Processamento por Lotes */}
+        {isProcessingInBatches && (
+          <div className="mt-4 bg-blue-50 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-blue-800">
+                Processando planilha em lotes...
+              </span>
+              <span className="text-sm text-blue-600">{processingProgress}%</span>
+            </div>
+            <div className="w-full bg-blue-200 rounded-full h-2">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${processingProgress}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-blue-600 mt-2">{processingStatus}</p>
+          </div>
+        )}
+        
+        {/* Status de Processamento */}
+        {processingStatus && !isProcessingInBatches && (
+          <div className="mt-4 bg-green-50 rounded-lg p-4">
+            <p className="text-sm text-green-800">{processingStatus}</p>
+          </div>
+        )}
+        
+        {/* Erro de Processamento */}
+        {processingError && (
+          <div className="mt-4 bg-red-50 rounded-lg p-4">
+            <p className="text-sm text-red-800">{processingError}</p>
+          </div>
+        )}
       </div>
 
       {/* Informações da Planilha */}
@@ -258,6 +361,24 @@ const ExcelUploadPanel: React.FC = () => {
               </p>
             </div>
           </div>
+          
+          {/* Informações de Processamento por Lotes */}
+          {excelData.metadata.processingStatus && (
+            <div className="mt-4 pt-4 border-t border-blue-200">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span className="text-sm font-medium text-blue-800">
+                  Processamento por Lotes
+                </span>
+              </div>
+              <p className="text-xs text-blue-600 mt-1">
+                {excelData.metadata.processedBatches && excelData.metadata.totalBatches
+                  ? `Lotes processados: ${excelData.metadata.processedBatches}/${excelData.metadata.totalBatches}`
+                  : 'Processado em lotes para otimizar memória'
+                }
+              </p>
+            </div>
+          )}
         </div>
       )}
 

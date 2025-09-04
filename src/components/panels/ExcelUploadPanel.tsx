@@ -158,7 +158,7 @@ const ExcelUploadPanel: React.FC = () => {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch('/api/excel/upload', {
+      const response = await fetch('http://localhost:3001/api/excel/upload', {
         method: 'POST',
         body: formData,
       });

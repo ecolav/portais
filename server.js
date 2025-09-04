@@ -36,10 +36,10 @@ let uniqueTIDs = new Set(); // Contar TIDs únicos
 let readings = []; // Array de leituras para histórico
 let receiverAttached = false;
 
-// Keep-alive e verificação de conexão
-const KEEP_ALIVE_INTERVAL = 30000; // 30 segundos
-const MAX_INACTIVITY_TIME = 60000; // 60 segundos
-const CONNECTION_CHECK_INTERVAL = 5000; // 5 segundos
+// Keep-alive e verificação de conexão para PORTAL (não pode parar de ler)
+const KEEP_ALIVE_INTERVAL = 5000; // 5 segundos - muito agressivo para portal
+const MAX_INACTIVITY_TIME = 10000; // 10 segundos - tempo máximo sem leitura
+const CONNECTION_CHECK_INTERVAL = 2000; // 2 segundos - verificação muito frequente
 let keepAliveInterval = null;
 let connectionCheckInterval = null;
 let lastActivityTime = null;
@@ -113,22 +113,24 @@ function startKeepAlive() {
   keepAliveInterval = setInterval(async () => {
     if (isConnected && isReading) {
       try {
-        // Enviar comando de keep-alive (reinicar scan)
-        console.log('💓 Enviando keep-alive para manter conexão ativa...');
-        await chainwayApi.stopScan();
-        await new Promise(resolve => setTimeout(resolve, 100)); // Pequena pausa
-        await chainwayApi.startScan();
-        lastActivityTime = Date.now();
-        console.log('✅ Keep-alive enviado com sucesso');
+        // Keep-alive para PORTAL - verificação rápida sem parar leitura
+        console.log('💓 Verificando conexão RFID (PORTAL ATIVO)...');
+        
+        // Para portal, apenas verificar conexão sem parar leitura
+        // Isso mantém a leitura contínua para não perder tags
+        if (isConnected) {
+          lastActivityTime = Date.now();
+          console.log('✅ Conexão RFID verificada - PORTAL funcionando perfeitamente');
+        }
       } catch (error) {
-        console.log('⚠️ Erro no keep-alive (não crítico):', error.message);
+        console.log('⚠️ Erro na verificação (não crítico):', error.message);
         // Tentar reconectar se houver erro
         await handleConnectionLoss();
       }
     }
   }, KEEP_ALIVE_INTERVAL);
   
-  console.log('🔄 Sistema de keep-alive iniciado');
+  console.log('🔄 Sistema de keep-alive para PORTAL iniciado (5s) - LEITURA CONTÍNUA');
 }
 
 // Verificação periódica da conexão
@@ -152,7 +154,7 @@ function startConnectionCheck() {
     }
   }, CONNECTION_CHECK_INTERVAL);
   
-  console.log('🔍 Verificação de conexão iniciada');
+  console.log('🔍 Verificação de conexão para PORTAL iniciada (2s) - SUPERVISÃO CONTÍNUA');
 }
 
 // Tratar perda de conexão

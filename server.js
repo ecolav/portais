@@ -36,6 +36,14 @@ let uniqueTIDs = new Set(); // Contar TIDs únicos
 let readings = []; // Array de leituras para histórico
 let receiverAttached = false;
 
+// Keep-alive e verificação de conexão
+const KEEP_ALIVE_INTERVAL = 30000; // 30 segundos
+const MAX_INACTIVITY_TIME = 60000; // 60 segundos
+const CONNECTION_CHECK_INTERVAL = 5000; // 5 segundos
+let keepAliveInterval = null;
+let connectionCheckInterval = null;
+let lastActivityTime = null;
+
 console.log('🚀 Servidor RFID rodando na porta', PORT);
 console.log('📡 Configuração padrão:', `${rfidConfig.ip}:${rfidConfig.port}`);
 
@@ -55,6 +63,9 @@ function connectToRFIDReader() {
           if (tidValue) {
             uniqueTIDs.add(tidValue);
           }
+          
+          // Atualizar tempo de atividade quando receber dados
+          lastActivityTime = Date.now();
 
           const reading = {
             id: Date.now(),
@@ -79,6 +90,11 @@ function connectToRFIDReader() {
       }
 
       console.log(`✅ Conectado ao leitor RFID em ${rfidConfig.ip}:${rfidConfig.port}!`);
+      
+      // Iniciar sistema de keep-alive
+      startKeepAlive();
+      startConnectionCheck();
+      
       resolve();
     } catch (error) {
       console.error(`❌ Erro na conexão RFID (${rfidConfig.ip}:${rfidConfig.port}):`, error.message || error);
@@ -86,6 +102,104 @@ function connectToRFIDReader() {
       reject(error);
     }
   });
+}
+
+// Sistema de keep-alive para manter conexão ativa
+function startKeepAlive() {
+  if (keepAliveInterval) {
+    clearInterval(keepAliveInterval);
+  }
+  
+  keepAliveInterval = setInterval(async () => {
+    if (isConnected && isReading) {
+      try {
+        // Enviar comando de keep-alive (reinicar scan)
+        console.log('💓 Enviando keep-alive para manter conexão ativa...');
+        await chainwayApi.stopScan();
+        await new Promise(resolve => setTimeout(resolve, 100)); // Pequena pausa
+        await chainwayApi.startScan();
+        lastActivityTime = Date.now();
+        console.log('✅ Keep-alive enviado com sucesso');
+      } catch (error) {
+        console.log('⚠️ Erro no keep-alive (não crítico):', error.message);
+        // Tentar reconectar se houver erro
+        await handleConnectionLoss();
+      }
+    }
+  }, KEEP_ALIVE_INTERVAL);
+  
+  console.log('🔄 Sistema de keep-alive iniciado');
+}
+
+// Verificação periódica da conexão
+function startConnectionCheck() {
+  if (connectionCheckInterval) {
+    clearInterval(connectionCheckInterval);
+  }
+  
+  connectionCheckInterval = setInterval(async () => {
+    if (isConnected) {
+      try {
+        // Verificar se a conexão ainda está ativa
+        const currentTime = Date.now();
+        if (lastActivityTime && (currentTime - lastActivityTime) > MAX_INACTIVITY_TIME) {
+          console.log('⚠️ Inatividade detectada, verificando conexão...');
+          await handleConnectionLoss();
+        }
+      } catch (error) {
+        console.log('⚠️ Erro na verificação de conexão:', error.message);
+      }
+    }
+  }, CONNECTION_CHECK_INTERVAL);
+  
+  console.log('🔍 Verificação de conexão iniciada');
+}
+
+// Tratar perda de conexão
+async function handleConnectionLoss() {
+  console.log('🔄 Detectada perda de conexão, tentando reconectar...');
+  
+  try {
+    // Parar intervalos
+    if (keepAliveInterval) {
+      clearInterval(keepAliveInterval);
+      keepAliveInterval = null;
+    }
+    if (connectionCheckInterval) {
+      clearInterval(connectionCheckInterval);
+      connectionCheckInterval = null;
+    }
+    
+    // Marcar como desconectado
+    isConnected = false;
+    isReading = false;
+    
+    // Tentar reconectar
+    await connectToRFIDReader();
+    
+    // Se reconectou com sucesso, reiniciar leitura se estava lendo antes
+    if (isConnected) {
+      console.log('✅ Reconexão bem-sucedida!');
+      // Emitir status atualizado
+      io.emit('connection-status', { 
+        isConnected: true,
+        isReading: isReading,
+        totalReadings: totalReadings,
+        uniqueTIDs: uniqueTIDs.size,
+        config: rfidConfig
+      });
+    }
+  } catch (error) {
+    console.error('❌ Falha na reconexão:', error.message);
+    // Emitir status de desconectado
+    io.emit('connection-status', { 
+      isConnected: false,
+      isReading: false,
+      totalReadings: totalReadings,
+      uniqueTIDs: uniqueTIDs.size,
+      config: rfidConfig
+    });
+  }
 }
 
 // Iniciar leitura contínua via chainway-rfid
@@ -102,6 +216,7 @@ async function startContinuousReading() {
     console.log(`🟢 Iniciando leitura contínua em ${rfidConfig.ip}:${rfidConfig.port}...`);
     await chainwayApi.startScan();
     isReading = true;
+    lastActivityTime = Date.now(); // Atualizar tempo de atividade
     console.log('✅ Leitura contínua iniciada');
   } catch (error) {
     console.error('❌ Erro ao iniciar leitura:', error.message || error);
@@ -118,6 +233,7 @@ async function stopContinuousReading() {
     console.log('🛑 Parando leitura contínua...');
     await chainwayApi.stopScan();
     isReading = false;
+    lastActivityTime = Date.now(); // Atualizar tempo de atividade
     console.log('✅ Leitura contínua parada');
   } catch (error) {
     console.error('❌ Erro ao parar leitura:', error.message || error);
@@ -129,6 +245,19 @@ async function disconnectFromRFIDReader() {
   if (!isConnected) return;
   try {
     console.log(`🔌 Desconectando do leitor RFID (${rfidConfig.ip}:${rfidConfig.port})...`);
+    
+    // Parar intervalos de keep-alive
+    if (keepAliveInterval) {
+      clearInterval(keepAliveInterval);
+      keepAliveInterval = null;
+      console.log('🔄 Keep-alive parado');
+    }
+    
+    if (connectionCheckInterval) {
+      clearInterval(connectionCheckInterval);
+      connectionCheckInterval = null;
+      console.log('🔍 Verificação de conexão parada');
+    }
     
     // Verificar se os métodos existem antes de chamar
     if (typeof chainwayApi.stopScan === 'function') {
@@ -149,12 +278,24 @@ async function disconnectFromRFIDReader() {
     
     isReading = false;
     isConnected = false;
+    lastActivityTime = null;
     console.log('✅ Desconectado do leitor RFID');
   } catch (error) {
     console.error('❌ Erro ao desconectar:', error.message || error);
     // Forçar desconexão mesmo com erro
     isReading = false;
     isConnected = false;
+    lastActivityTime = null;
+    
+    // Limpar intervalos mesmo com erro
+    if (keepAliveInterval) {
+      clearInterval(keepAliveInterval);
+      keepAliveInterval = null;
+    }
+    if (connectionCheckInterval) {
+      clearInterval(connectionCheckInterval);
+      connectionCheckInterval = null;
+    }
   }
 }
 

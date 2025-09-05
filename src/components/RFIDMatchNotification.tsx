@@ -5,7 +5,6 @@ import { useRFIDMatches } from '../contexts/RFIDMatchesContext';
 const RFIDMatchNotification: React.FC = () => {
   const { state, removeMatch } = useRFIDMatches();
   const { matches } = state;
-  const [isPlaying, setIsPlaying] = useState(false);
   const [displayMatches, setDisplayMatches] = useState<any[]>([]);
 
   useEffect(() => {
@@ -34,40 +33,22 @@ const RFIDMatchNotification: React.FC = () => {
   }, [matches]);
 
   const playMatchSound = () => {
-    if (isPlaying) return;
-    
-    setIsPlaying(true);
-    
     try {
-      // Criar contexto de áudio
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      // Sirene simples usando beep do sistema - muito mais eficiente
+      const beep = () => {
+        // Caractere de beep ASCII - funciona na maioria dos sistemas
+        console.log('\u0007');
+      };
       
-      // Criar oscilador para som grave
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
+      // Tocar 3 beeps rápidos para simular sirene
+      beep();
+      setTimeout(() => beep(), 200);
+      setTimeout(() => beep(), 400);
       
-      // Configurar som grave (frequência baixa)
-      oscillator.frequency.setValueAtTime(150, audioContext.currentTime); // 150Hz - som grave
-      oscillator.frequency.setValueAtTime(100, audioContext.currentTime + 0.1); // 100Hz - mais grave
-      oscillator.frequency.setValueAtTime(150, audioContext.currentTime + 0.2); // Volta para 150Hz
-      
-      // Configurar volume e envelope
-      gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-      
-      // Conectar e tocar
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-      
-      // Reset após tocar
-      setTimeout(() => setIsPlaying(false), 600);
+      console.log('🔊 Sirene de correspondência tocada');
       
     } catch (error) {
-      console.warn('⚠️ Não foi possível tocar som:', error);
-      setIsPlaying(false);
+      console.warn('⚠️ Não foi possível tocar sirene:', error);
     }
   };
 

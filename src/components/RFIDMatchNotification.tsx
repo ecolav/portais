@@ -8,16 +8,22 @@ const RFIDMatchNotification: React.FC = () => {
   const [displayMatches, setDisplayMatches] = useState<any[]>([]);
 
   useEffect(() => {
+    console.log('🔔 RFIDMatchNotification: matches atualizados:', matches.length);
+    
     // Quando uma nova correspondência chega, adicionar à lista de exibição
     if (matches.length > 0) {
       const latestMatch = matches[0];
+      console.log('🔔 RFIDMatchNotification: Nova correspondência detectada:', latestMatch);
+      
       setDisplayMatches(prev => {
         // Verificar se já existe (evitar duplicatas)
         const exists = prev.some(m => m.timestamp === latestMatch.timestamp);
         if (!exists) {
+          console.log('🔔 RFIDMatchNotification: Adicionando nova correspondência à exibição');
           const newDisplay = [latestMatch, ...prev.slice(0, 4)]; // Manter apenas as últimas 5
           
-          // Tocar som grave
+          // Tocar som de correspondência
+          console.log('🔔 RFIDMatchNotification: Tocando som de correspondência...');
           playMatchSound();
           
           // Auto-remover após 10 segundos
@@ -26,6 +32,8 @@ const RFIDMatchNotification: React.FC = () => {
           }, 10000);
           
           return newDisplay;
+        } else {
+          console.log('🔔 RFIDMatchNotification: Correspondência já existe na exibição');
         }
         return prev;
       });
@@ -34,21 +42,41 @@ const RFIDMatchNotification: React.FC = () => {
 
   const playMatchSound = () => {
     try {
-      // Sirene simples usando beep do sistema - muito mais eficiente
-      const beep = () => {
-        // Caractere de beep ASCII - funciona na maioria dos sistemas
-        console.log('\u0007');
+      // Usar som de erro do sistema - sempre toca, mesmo com som desativado
+      const playErrorSound = () => {
+        try {
+          // Criar contexto de áudio temporário
+          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          // Som de erro (frequência mais baixa) - sempre toca
+          oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+          oscillator.type = 'sawtooth';
+          
+          // Volume fixo para correspondência
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          
+          // Som mais longo para correspondência
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.8);
+          
+          console.log('🔊 Som de correspondência (erro) reproduzido');
+        } catch (audioError) {
+          // Fallback: beep do sistema
+          console.log('\u0007');
+          console.log('🔊 Beep de correspondência (fallback)');
+        }
       };
       
-      // Tocar 3 beeps rápidos para simular sirene
-      beep();
-      setTimeout(() => beep(), 200);
-      setTimeout(() => beep(), 400);
-      
-      console.log('🔊 Sirene de correspondência tocada');
+      // Tocar som de erro para correspondência
+      playErrorSound();
       
     } catch (error) {
-      console.warn('⚠️ Não foi possível tocar sirene:', error);
+      console.warn('⚠️ Não foi possível tocar som de correspondência:', error);
     }
   };
 

@@ -228,11 +228,15 @@ async function connectToRFIDReader() {
               notifiedMatches.add(matchKey);
               
               // Emitir evento de correspondência
-              io.emit('rfid-match-found', {
+              const matchData = {
                 reading: reading,
                 item: matchedItem,
                 timestamp: new Date().toISOString()
-              });
+              };
+              
+              console.log('📡 Emitindo evento rfid-match-found para todos os clientes...');
+              io.emit('rfid-match-found', matchData);
+              console.log('✅ Evento rfid-match-found emitido com sucesso');
               
               // Remover da lista após cooldown (para permitir nova notificação no futuro)
               setTimeout(() => {

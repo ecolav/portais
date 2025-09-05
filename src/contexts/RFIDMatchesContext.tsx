@@ -86,15 +86,30 @@ export function RFIDMatchesProvider({ children }: RFIDMatchesProviderProps) {
   // Conectar ao socket e escutar eventos
   useEffect(() => {
     if (socket) {
+      console.log('🔌 RFIDMatchesContext: Socket disponível, configurando listener...');
+      
       socket.on('rfid-match-found', (match: RFIDMatch) => {
-        console.log('🎯 Correspondência recebida no contexto:', match);
+        console.log('🎯 RFIDMatchesContext: Correspondência recebida no contexto:', match);
         addMatch(match);
       });
+      
+      socket.on('connect', () => {
+        console.log('✅ RFIDMatchesContext: Socket conectado');
+      });
+      
+      socket.on('disconnect', () => {
+        console.log('🔌 RFIDMatchesContext: Socket desconectado');
+      });
+    } else {
+      console.log('⚠️ RFIDMatchesContext: Socket não disponível');
     }
 
     return () => {
       if (socket) {
+        console.log('🧹 RFIDMatchesContext: Limpando listeners...');
         socket.off('rfid-match-found');
+        socket.off('connect');
+        socket.off('disconnect');
       }
     };
   }, [socket]);

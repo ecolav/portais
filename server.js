@@ -76,6 +76,13 @@ let comparisonCount = 0;
 let lastComparisonReset = Date.now();
 const MAX_COMPARISONS_PER_SECOND = 100; // Máximo 100 comparações por segundo
 
+// Função auxiliar para verificar se o stream está válido
+function isStreamValid() {
+  return chainwayApi && 
+         chainwayApi.client && 
+         !chainwayApi.client.destroyed;
+}
+
 // Configurações para processamento por lotes
 const EXCEL_BATCH_SIZE = 1000; // Processar 1000 linhas por vez
 const MAX_EXCEL_ITEMS = 50000; // Máximo de 50k itens na memória
@@ -315,12 +322,55 @@ async function connectToRFIDReader() {
           console.log('  📊 Status atual: isReading=', isReading);
           console.log('  📊 isConnected:', isConnected);
           
+          // Verificar se o stream ainda está válido
+          if (chainwayApi.client && chainwayApi.client.destroyed) {
+            console.log('  ⚠️ Stream já foi destruído - pulando stopScan');
+            isReading = false;
+            return;
+          }
+          
           // Só permitir se for chamado explicitamente pelo usuário
           if (isReading) {
             console.log('  ⚠️ stopScan chamado enquanto está lendo - investigando...');
           }
           
-          return await originalStopScan.apply(this, args);
+          try {
+            return await originalStopScan.apply(this, args);
+          } catch (error) {
+            if (error.code === 'ERR_STREAM_DESTROYED') {
+              console.log('  ⚠️ Stream destruído durante stopScan - marcando como parado');
+              isReading = false;
+              return;
+            }
+            throw error;
+          }
+        };
+      }
+      
+      // Interceptar startScan para verificar stream válido
+      if (typeof chainwayApi.startScan === 'function') {
+        const originalStartScan = chainwayApi.startScan;
+        chainwayApi.startScan = async function(...args) {
+          console.log('🚨 INTERCEPTADO: chainwayApi.startScan() chamado');
+          console.log('  📊 Status atual: isReading=', isReading);
+          console.log('  📊 isConnected:', isConnected);
+          console.log('  📊 Stream válido:', isStreamValid());
+          
+          // Verificar se o stream ainda está válido
+          if (!isStreamValid()) {
+            console.log('  ⚠️ Stream inválido - não é possível iniciar leitura');
+            throw new Error('Stream TCP destruído - reconecte primeiro');
+          }
+          
+          try {
+            return await originalStartScan.apply(this, args);
+          } catch (error) {
+            if (error.code === 'ERR_STREAM_DESTROYED') {
+              console.log('  ⚠️ Stream destruído durante startScan');
+              throw new Error('Stream TCP destruído - reconecte primeiro');
+            }
+            throw error;
+          }
         };
       }
       
@@ -578,10 +628,21 @@ function startAutoRestart() {
         // Aguardar um pouco para estabilizar
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Verificar conexão novamente antes de reiniciar
+        // Verificar conexão e stream válido antes de reiniciar
         if (!isConnected) {
           console.log('  ⚠️ Conexão perdida - não é possível reiniciar leitura');
           return;
+        }
+        
+        if (!isStreamValid()) {
+          console.log('  ⚠️ Stream TCP destruído - tentando reconectar...');
+          try {
+            await connectToRFIDReader();
+            console.log('  ✅ Reconectado com sucesso');
+          } catch (reconnectError) {
+            console.log('  ❌ Falha na reconexão:', reconnectError.message);
+            return;
+          }
         }
         
         // Reiniciar leitura (como o botão "Iniciar Leitura")
@@ -594,12 +655,16 @@ function startAutoRestart() {
         } catch (startError) {
           console.log('  ❌ Erro ao reiniciar leitura:', startError.message);
           isReading = false;
-          // Se falhar ao reiniciar, tentar reconectar
-          console.log('  🔄 Tentando reconectar...');
-          try {
-            await connectToRFIDReader();
-          } catch (reconnectError) {
-            console.log('  ❌ Falha na reconexão:', reconnectError.message);
+          
+          // Se o erro for de stream destruído, tentar reconectar
+          if (startError.message.includes('Stream TCP destruído')) {
+            console.log('  🔄 Stream destruído - tentando reconectar...');
+            try {
+              await connectToRFIDReader();
+              console.log('  ✅ Reconectado após erro de stream');
+            } catch (reconnectError) {
+              console.log('  ❌ Falha na reconexão:', reconnectError.message);
+            }
           }
         }
         
@@ -1865,6 +1930,14 @@ process.on('unhandledRejection', (reason, promise) => {
   // Se for erro de socket fechado, não encerrar o servidor
   if (reason && reason.code === 'EPIPE') {
     console.log('🔌 Socket fechado detectado - continuando operação');
+    return;
+  }
+  
+  // Se for erro de stream destruído, não encerrar o servidor
+  if (reason && reason.code === 'ERR_STREAM_DESTROYED') {
+    console.log('🔌 Stream destruído detectado - continuando operação');
+    isReading = false;
+    isConnected = false;
     return;
   }
   

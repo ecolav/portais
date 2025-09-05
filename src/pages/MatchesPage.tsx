@@ -1,18 +1,17 @@
 import RFIDMatchesPanel from '../components/panels/RFIDMatchesPanel';
+import PageHeader from '../components/PageHeader';
+import { CheckCircle } from 'lucide-react';
 
 export default function MatchesPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Cabeçalho */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Correspondências RFID
-          </h1>
-          <p className="text-gray-600">
-            Histórico completo de correspondências entre TIDs lidos e dados da planilha
-          </p>
-        </div>
+        {/* Cabeçalho com Logo */}
+        <PageHeader 
+          title="Correspondências RFID"
+          subtitle="Histórico completo de correspondências entre TIDs lidos e dados da planilha"
+          icon={<CheckCircle className="w-7 h-7 text-white" />}
+        />
 
         {/* Seção Principal: Painel de Correspondências */}
         <div className="bg-white rounded-lg shadow-md p-6">

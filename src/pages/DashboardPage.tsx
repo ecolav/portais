@@ -5,6 +5,8 @@ import StatsPanel from '../components/panels/StatsPanel';
 import AudioConfigPanel from '../components/panels/AudioConfigPanel';
 import CameraConfigPanel from '../components/panels/CameraConfigPanel';
 import NotificationMethodPanel from '../components/panels/NotificationMethodPanel';
+import PageHeader from '../components/PageHeader';
+import { Home } from 'lucide-react';
 
 export default function DashboardPage() {
   const {
@@ -25,15 +27,12 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Cabeçalho */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Dashboard - Controle do Sistema
-          </h1>
-          <p className="text-gray-600">
-            Configure, controle e monitore o sistema RFID
-          </p>
-        </div>
+        {/* Cabeçalho com Logo */}
+        <PageHeader 
+          title="Dashboard - Controle do Sistema"
+          subtitle="Configure, controle e monitore o sistema RFID"
+          icon={<Home className="w-7 h-7 text-white" />}
+        />
 
         {/* Painel de Erros */}
         {error && (

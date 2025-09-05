@@ -1,18 +1,17 @@
 import ExcelUploadPanel from '../components/panels/ExcelUploadPanel';
+import PageHeader from '../components/PageHeader';
+import { FileSpreadsheet } from 'lucide-react';
 
 export default function ExcelPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Cabeçalho */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Gerenciamento de Planilhas Excel
-          </h1>
-          <p className="text-gray-600">
-            Upload, visualização e gerenciamento de dados da planilha
-          </p>
-        </div>
+        {/* Cabeçalho com Logo */}
+        <PageHeader 
+          title="Gerenciamento de Planilhas Excel"
+          subtitle="Upload, visualização e gerenciamento de dados da planilha"
+          icon={<FileSpreadsheet className="w-7 h-7 text-white" />}
+        />
 
         {/* Seção Principal: Upload e Gerenciamento */}
         <div className="bg-white rounded-lg shadow-md p-6">

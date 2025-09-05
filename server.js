@@ -67,6 +67,10 @@ let excelMetadata = {
   columns: []
 };
 
+// Sistema para evitar notificações duplicadas
+let notifiedMatches = new Set(); // Armazenar TID+UHF já notificados
+const NOTIFICATION_COOLDOWN = 30000; // 30 segundos de cooldown entre notificações da mesma TID+UHF
+
 // Configurações para processamento por lotes
 const EXCEL_BATCH_SIZE = 1000; // Processar 1000 linhas por vez
 const MAX_EXCEL_ITEMS = 50000; // Máximo de 50k itens na memória
@@ -199,19 +203,46 @@ async function connectToRFIDReader() {
             });
           }
 
-          // Se encontrou correspondência, emitir evento especial
+          // Se encontrou correspondência, verificar se já foi notificada
           if (matchedItem) {
-            console.log(`🎯 CORRESPONDÊNCIA ENCONTRADA!`);
-            console.log(`  📋 TID: ${tidValue}`);
-            console.log(`  📦 Item: ${JSON.stringify(matchedItem)}`);
-            console.log(`  📡 Antena: ${reading.antenna}`);
+            // Criar chave única para TID+UHF
+            const uhfColumn = Object.keys(matchedItem).find(key => 
+              key.toLowerCase().includes('uhf') || 
+              key.toLowerCase() === 'uhf'
+            );
+            const itemUHF = uhfColumn ? String(matchedItem[uhfColumn]).toUpperCase().trim() : '';
+            const matchKey = `${tidValue.toUpperCase().trim()}_${itemUHF}`;
             
-            // Emitir evento de correspondência
-            io.emit('rfid-match-found', {
-              reading: reading,
-              item: matchedItem,
-              timestamp: new Date().toISOString()
-            });
+            // Verificar se já foi notificada recentemente
+            const now = Date.now();
+            const lastNotification = notifiedMatches.has(matchKey);
+            
+            if (!lastNotification) {
+              console.log(`🎯 CORRESPONDÊNCIA ENCONTRADA!`);
+              console.log(`  📋 TID: ${tidValue}`);
+              console.log(`  📦 Item: ${JSON.stringify(matchedItem)}`);
+              console.log(`  📡 Antena: ${reading.antenna}`);
+              console.log(`  🔑 Chave: ${matchKey}`);
+              
+              // Adicionar à lista de notificados
+              notifiedMatches.add(matchKey);
+              
+              // Emitir evento de correspondência
+              io.emit('rfid-match-found', {
+                reading: reading,
+                item: matchedItem,
+                timestamp: new Date().toISOString()
+              });
+              
+              // Remover da lista após cooldown (para permitir nova notificação no futuro)
+              setTimeout(() => {
+                notifiedMatches.delete(matchKey);
+                console.log(`🔄 Cooldown expirado para ${matchKey} - pode notificar novamente`);
+              }, NOTIFICATION_COOLDOWN);
+              
+            } else {
+              console.log(`⏭️ Correspondência já notificada recentemente: ${matchKey}`);
+            }
           }
 
           io.emit('rfid-reading', reading);
@@ -1574,10 +1605,17 @@ setInterval(() => {
       });
     }
     
+    // Limpar notificações antigas para evitar acúmulo de memória
+    if (notifiedMatches.size > 1000) {
+      console.log(`🧹 Limpando notificações antigas (${notifiedMatches.size} itens)`);
+      notifiedMatches.clear();
+      console.log(`✅ Notificações limpas - sistema resetado`);
+    }
+    
     // Log de uso de memória
     const memUsage = process.memoryUsage();
     const heapUsed = Math.round(memUsage.heapUsed / 1024 / 1024);
-    console.log(`💾 Memória atual: ${heapUsed}MB | Excel: ${excelData.length} itens`);
+    console.log(`💾 Memória atual: ${heapUsed}MB | Excel: ${excelData.length} itens | Notificações: ${notifiedMatches.size}`);
     
   } catch (error) {
     console.error('❌ Erro no monitoramento de memória Excel:', error.message);
@@ -1697,6 +1735,45 @@ app.get('/api/excel/status', (req, res) => {
     res.status(500).json({
       success: false,
       message: `Erro ao buscar status: ${error.message}`
+    });
+  }
+});
+
+// Endpoint para limpar notificações duplicadas
+app.post('/api/notifications/clear', (req, res) => {
+  try {
+    const previousSize = notifiedMatches.size;
+    notifiedMatches.clear();
+    
+    console.log(`🧹 Notificações limpas manualmente: ${previousSize} → 0`);
+    
+    res.json({
+      success: true,
+      message: `Notificações limpas: ${previousSize} itens removidos`,
+      previousSize: previousSize,
+      currentSize: 0
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao limpar notificações: ' + error.message
+    });
+  }
+});
+
+// Endpoint para obter status das notificações
+app.get('/api/notifications/status', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      totalNotifications: notifiedMatches.size,
+      cooldownPeriod: NOTIFICATION_COOLDOWN,
+      memoryUsage: process.memoryUsage().heapUsed
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao obter status das notificações: ' + error.message
     });
   }
 });

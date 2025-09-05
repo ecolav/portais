@@ -1,18 +1,20 @@
-import { Radio } from 'lucide-react';
 
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
-  icon?: React.ReactNode;
 }
 
-const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon }) => {
+const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle }) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
       <div className="flex items-center gap-4">
         {/* Logo */}
-        <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center shadow-md">
-          {icon || <Radio className="w-7 h-7 text-white" />}
+        <div className="w-12 h-12 rounded-lg overflow-hidden shadow-md">
+          <img 
+            src="/ecolav.jpg" 
+            alt="Logo Ecolav" 
+            className="w-full h-full object-cover"
+          />
         </div>
         
         {/* Título e Subtítulo */}

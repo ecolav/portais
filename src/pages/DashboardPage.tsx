@@ -6,7 +6,6 @@ import AudioConfigPanel from '../components/panels/AudioConfigPanel';
 import CameraConfigPanel from '../components/panels/CameraConfigPanel';
 import NotificationMethodPanel from '../components/panels/NotificationMethodPanel';
 import PageHeader from '../components/PageHeader';
-import { Home } from 'lucide-react';
 
 export default function DashboardPage() {
   const {
@@ -31,7 +30,6 @@ export default function DashboardPage() {
         <PageHeader 
           title="Dashboard - Controle do Sistema"
           subtitle="Configure, controle e monitore o sistema RFID"
-          icon={<Home className="w-7 h-7 text-white" />}
         />
 
         {/* Painel de Erros */}

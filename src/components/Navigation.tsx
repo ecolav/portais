@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { 
   Home, 
-  Radio, 
   FileSpreadsheet, 
   CheckCircle, 
   Settings,
@@ -26,8 +25,12 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChange }) =>
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center shadow-md">
-              <Radio className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-lg overflow-hidden shadow-md">
+              <img 
+                src="/ecolav.jpg" 
+                alt="Logo Ecolav" 
+                className="w-full h-full object-cover"
+              />
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-800">Portal Ecolav</h1>

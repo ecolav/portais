@@ -534,23 +534,52 @@ function startAutoRestart() {
       try {
         console.log('🔄 Auto-restart: Parando e reiniciando leitura automaticamente...');
         
+        // Verificar se a conexão ainda está ativa antes de tentar parar
+        if (!isConnected) {
+          console.log('  ⚠️ Conexão perdida durante auto-restart - pulando');
+          return;
+        }
+        
         // Parar leitura (como o botão "Parar Leitura")
         console.log('  🛑 Parando leitura...');
-        await chainwayApi.stopScan();
-        isReading = false;
-        console.log('  ✅ Leitura parada');
+        try {
+          await chainwayApi.stopScan();
+          isReading = false;
+          console.log('  ✅ Leitura parada');
+        } catch (stopError) {
+          console.log('  ⚠️ Erro ao parar leitura (não crítico):', stopError.message);
+          isReading = false;
+        }
         
         // Aguardar um pouco para estabilizar
         await new Promise(resolve => setTimeout(resolve, 1000));
         
+        // Verificar conexão novamente antes de reiniciar
+        if (!isConnected) {
+          console.log('  ⚠️ Conexão perdida - não é possível reiniciar leitura');
+          return;
+        }
+        
         // Reiniciar leitura (como o botão "Iniciar Leitura")
         console.log('  🟢 Reiniciando leitura...');
-        await chainwayApi.startScan();
-        isReading = true;
-        lastReadingTime = Date.now();
-        console.log('  ✅ Leitura reiniciada');
+        try {
+          await chainwayApi.startScan();
+          isReading = true;
+          lastReadingTime = Date.now();
+          console.log('  ✅ Leitura reiniciada');
+        } catch (startError) {
+          console.log('  ❌ Erro ao reiniciar leitura:', startError.message);
+          isReading = false;
+          // Se falhar ao reiniciar, tentar reconectar
+          console.log('  🔄 Tentando reconectar...');
+          try {
+            await connectToRFIDReader();
+          } catch (reconnectError) {
+            console.log('  ❌ Falha na reconexão:', reconnectError.message);
+          }
+        }
         
-        console.log('🔄 Auto-restart concluído com sucesso');
+        console.log('🔄 Auto-restart concluído');
         
       } catch (error) {
         console.error('❌ Erro no auto-restart:', error.message);
@@ -1786,6 +1815,14 @@ process.on('uncaughtException', (error) => {
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('🚨 Promise rejeitada não tratada:', reason);
+  
+  // Se for erro de socket fechado, não encerrar o servidor
+  if (reason && reason.code === 'EPIPE') {
+    console.log('🔌 Socket fechado detectado - continuando operação');
+    return;
+  }
+  
+  // Para outros erros, encerrar graciosamente
   gracefulShutdown('Promise rejeitada não tratada');
 });
 

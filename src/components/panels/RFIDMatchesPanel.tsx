@@ -1,51 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { CheckCircle, Clock, Antenna, Signal, X } from 'lucide-react';
-import { useSocket } from '../../hooks/useSocket';
-
-interface RFIDMatch {
-  reading: {
-    tid: string;
-    antenna: number;
-    rssi: number;
-    timestamp: string;
-  };
-  item: {
-    [key: string]: any;
-  };
-  timestamp: string;
-}
+import { useRFIDMatches } from '../../contexts/RFIDMatchesContext';
 
 const RFIDMatchesPanel: React.FC = () => {
-  const socket = useSocket();
-  const [matches, setMatches] = useState<RFIDMatch[]>([]);
-  const [totalMatches, setTotalMatches] = useState(0);
-
-  useEffect(() => {
-    if (socket) {
-      socket.on('rfid-match-found', (match: RFIDMatch) => {
-        console.log('🎯 Correspondência recebida no painel:', match);
-        
-        // Adicionar à lista de correspondências
-        setMatches(prev => [match, ...prev]);
-        setTotalMatches(prev => prev + 1);
-      });
-    }
-
-    return () => {
-      if (socket) {
-        socket.off('rfid-match-found');
-      }
-    };
-  }, [socket]);
-
-  const clearMatches = () => {
-    setMatches([]);
-    setTotalMatches(0);
-  };
-
-  const removeMatch = (timestamp: string) => {
-    setMatches(prev => prev.filter(m => m.timestamp !== timestamp));
-  };
+  const { state, clearMatches, removeMatch } = useRFIDMatches();
+  const { matches, totalMatches } = state;
 
   const formatTimestamp = (timestamp: string) => {
     return new Date(timestamp).toLocaleString('pt-BR');

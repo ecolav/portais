@@ -331,7 +331,7 @@ async function connectToRFIDReader() {
     startKeepAlive();
     startConnectionCheck();
     startReadingHealthCheck();
-    startAutoRestart(); // Iniciar auto-restart da leitura
+    // startAutoRestart(); // Iniciar auto-restart da leitura - DESABILITADO TEMPORARIAMENTE
     startMemoryCheck(); // Iniciar monitoramento de memória
     
     // NÃO iniciar leitura automaticamente - apenas conectar

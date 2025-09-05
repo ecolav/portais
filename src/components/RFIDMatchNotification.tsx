@@ -1,49 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, X } from 'lucide-react';
-import { useSocket } from '../hooks/useSocket';
-
-interface RFIDMatch {
-  reading: {
-    tid: string;
-    antenna: number;
-    rssi: number;
-    timestamp: string;
-  };
-  item: {
-    [key: string]: any;
-  };
-  timestamp: string;
-}
+import { useRFIDMatches } from '../contexts/RFIDMatchesContext';
 
 const RFIDMatchNotification: React.FC = () => {
-  const socket = useSocket();
-  const [matches, setMatches] = useState<RFIDMatch[]>([]);
+  const { state, removeMatch } = useRFIDMatches();
+  const { matches } = state;
   const [isPlaying, setIsPlaying] = useState(false);
+  const [displayMatches, setDisplayMatches] = useState<any[]>([]);
 
   useEffect(() => {
-    if (socket) {
-      socket.on('rfid-match-found', (match: RFIDMatch) => {
-        console.log('🎯 Correspondência RFID encontrada:', match);
-        
-        // Adicionar à lista de correspondências
-        setMatches(prev => [match, ...prev.slice(0, 4)]); // Manter apenas as últimas 5
-        
-        // Tocar som grave
-        playMatchSound();
-        
-        // Auto-remover após 10 segundos
-        setTimeout(() => {
-          setMatches(prev => prev.filter(m => m.timestamp !== match.timestamp));
-        }, 10000);
+    // Quando uma nova correspondência chega, adicionar à lista de exibição
+    if (matches.length > 0) {
+      const latestMatch = matches[0];
+      setDisplayMatches(prev => {
+        // Verificar se já existe (evitar duplicatas)
+        const exists = prev.some(m => m.timestamp === latestMatch.timestamp);
+        if (!exists) {
+          const newDisplay = [latestMatch, ...prev.slice(0, 4)]; // Manter apenas as últimas 5
+          
+          // Tocar som grave
+          playMatchSound();
+          
+          // Auto-remover após 10 segundos
+          setTimeout(() => {
+            setDisplayMatches(current => current.filter(m => m.timestamp !== latestMatch.timestamp));
+          }, 10000);
+          
+          return newDisplay;
+        }
+        return prev;
       });
     }
-
-    return () => {
-      if (socket) {
-        socket.off('rfid-match-found');
-      }
-    };
-  }, [socket]);
+  }, [matches]);
 
   const playMatchSound = () => {
     if (isPlaying) return;
@@ -83,14 +71,14 @@ const RFIDMatchNotification: React.FC = () => {
     }
   };
 
-  const removeMatch = (timestamp: string) => {
-    setMatches(prev => prev.filter(m => m.timestamp !== timestamp));
+  const removeDisplayMatch = (timestamp: string) => {
+    setDisplayMatches(prev => prev.filter(m => m.timestamp !== timestamp));
   };
 
   return (
     <div className="fixed top-4 right-4 z-50 space-y-3 max-w-md">
-      {matches.length > 0 && (
-        matches.map((match) => (
+      {displayMatches.length > 0 && (
+        displayMatches.map((match) => (
         <div
           key={match.timestamp}
           className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg animate-in slide-in-from-right-2 duration-300"
@@ -106,7 +94,7 @@ const RFIDMatchNotification: React.FC = () => {
                   🎯 Correspondência Encontrada!
                 </h4>
                 <button
-                  onClick={() => removeMatch(match.timestamp)}
+                  onClick={() => removeDisplayMatch(match.timestamp)}
                   className="ml-auto text-green-400 hover:text-green-600 transition-colors"
                 >
                   <X className="w-4 h-4" />

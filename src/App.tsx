@@ -5,6 +5,8 @@ import ExcelPage from './pages/ExcelPage';
 import MatchesPage from './pages/MatchesPage';
 import RFIDMatchNotification from './components/RFIDMatchNotification';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { ExcelProvider } from './contexts/ExcelContext';
+import { RFIDMatchesProvider } from './contexts/RFIDMatchesContext';
 import './App.css';
 
 function App() {
@@ -25,13 +27,17 @@ function App() {
 
   return (
     <NotificationProvider>
-      <div className="App">
-        <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
-        <main>
-          {renderPage()}
-        </main>
-        <RFIDMatchNotification />
-      </div>
+      <ExcelProvider>
+        <RFIDMatchesProvider>
+          <div className="App">
+            <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
+            <main>
+              {renderPage()}
+            </main>
+            <RFIDMatchNotification />
+          </div>
+        </RFIDMatchesProvider>
+      </ExcelProvider>
     </NotificationProvider>
   );
 }

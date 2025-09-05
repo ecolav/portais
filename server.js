@@ -71,6 +71,11 @@ let excelMetadata = {
 let notifiedMatches = new Set(); // Armazenar TID+UHF já notificados
 const NOTIFICATION_COOLDOWN = 30000; // 30 segundos de cooldown entre notificações da mesma TID+UHF
 
+// Sistema de proteção contra loops
+let comparisonCount = 0;
+let lastComparisonReset = Date.now();
+const MAX_COMPARISONS_PER_SECOND = 100; // Máximo 100 comparações por segundo
+
 // Configurações para processamento por lotes
 const EXCEL_BATCH_SIZE = 1000; // Processar 1000 linhas por vez
 const MAX_EXCEL_ITEMS = 50000; // Máximo de 50k itens na memória
@@ -182,25 +187,40 @@ async function connectToRFIDReader() {
           // Verificar se TID corresponde a UHF da planilha
           let matchedItem = null;
           if (tidValue && excelData.length > 0) {
-            matchedItem = excelData.find(item => {
-              // Buscar por coluna UHF (case-insensitive)
-              const uhfColumn = Object.keys(item).find(key => 
-                key.toLowerCase().includes('uhf') || 
-                key.toLowerCase().includes('uhf') ||
-                key.toLowerCase() === 'uhf'
-              );
+            // Proteção contra loops - resetar contador a cada segundo
+            const now = Date.now();
+            if (now - lastComparisonReset > 1000) {
+              comparisonCount = 0;
+              lastComparisonReset = now;
+            }
+            
+            // Verificar se não excedeu o limite de comparações
+            if (comparisonCount < MAX_COMPARISONS_PER_SECOND) {
+              comparisonCount++;
               
-              if (uhfColumn && item[uhfColumn]) {
-                const itemUHF = String(item[uhfColumn]).toUpperCase().trim();
-                const tidClean = tidValue.toUpperCase().trim();
+              matchedItem = excelData.find(item => {
+                // Buscar por coluna UHF (case-insensitive)
+                const uhfColumn = Object.keys(item).find(key => 
+                  key.toLowerCase().includes('uhf') || 
+                  key.toLowerCase() === 'uhf'
+                );
                 
-                // Log para debug
-                console.log(`🔍 Comparando: "${itemUHF}" === "${tidClean}"`);
-                
-                return itemUHF === tidClean;
-              }
-              return false;
-            });
+                if (uhfColumn && item[uhfColumn]) {
+                  const itemUHF = String(item[uhfColumn]).toUpperCase().trim();
+                  const tidClean = tidValue.toUpperCase().trim();
+                  
+                  // Log apenas quando há correspondência para evitar spam
+                  if (itemUHF === tidClean) {
+                    console.log(`🔍 CORRESPONDÊNCIA ENCONTRADA: "${itemUHF}" === "${tidClean}"`);
+                  }
+                  
+                  return itemUHF === tidClean;
+                }
+                return false;
+              });
+            } else {
+              console.log(`⚠️ Limite de comparações excedido (${MAX_COMPARISONS_PER_SECOND}/s) - pulando comparação`);
+            }
           }
 
           // Se encontrou correspondência, verificar se já foi notificada
@@ -1801,13 +1821,35 @@ app.get('/api/notifications/status', (req, res) => {
       success: true,
       totalNotifications: notifiedMatches.size,
       cooldownPeriod: NOTIFICATION_COOLDOWN,
-      memoryUsage: process.memoryUsage().heapUsed
+      memoryUsage: process.memoryUsage().heapUsed,
+      comparisonCount: comparisonCount,
+      maxComparisonsPerSecond: MAX_COMPARISONS_PER_SECOND
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Erro ao obter status das notificações: ' + error.message
     });
+  }
+});
+
+// Endpoint para resetar contador de comparações
+app.post('/api/comparisons/reset', (req, res) => {
+  try {
+    const previousCount = comparisonCount;
+    comparisonCount = 0;
+    lastComparisonReset = Date.now();
+    
+    console.log(`🔄 Contador de comparações resetado: ${previousCount} → 0`);
+    
+    res.json({
+      success: true,
+      message: 'Contador de comparações resetado',
+      previousCount: previousCount
+    });
+  } catch (error) {
+    console.error('❌ Erro ao resetar contador de comparações:', error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

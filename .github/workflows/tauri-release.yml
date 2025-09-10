@@ -58,6 +58,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          toolchain: stable
           includeUpdaterJson: false
           tagName: ${{ github.ref_name }}
           releaseName: Portal Ecolav ${{ github.ref_name }}

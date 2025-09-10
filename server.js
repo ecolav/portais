@@ -4,6 +4,8 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const multer = require('multer');
 const xlsx = require('xlsx');
+const fs = require('fs');
+const path = require('path');
 const { chainwayApi } = require('chainway-rfid');
 
 const app = express();
@@ -60,12 +62,87 @@ let receiverAttached = false;
 
 // Sistema de armazenamento de planilhas Excel
 let excelData = []; // Array com todos os itens da planilha
+// Índice por UHF para buscas O(1)
+let excelIndexByUHF = new Map(); // chave: UHF (uppercase/trim) -> array de itens
+let excelUhfColumnName = null; // nome da coluna UHF inferido do cabeçalho
 let excelMetadata = {
   fileName: '',
   uploadDate: null,
   totalItems: 0,
   columns: []
 };
+
+// Persistência em disco
+const DATA_DIR = path.join(__dirname, 'data');
+const EXCEL_DATA_FILE = path.join(DATA_DIR, 'excel_data.json');
+let excelDirty = false;
+const AUTOSAVE_INTERVAL_MS = 15000; // 15s
+
+function ensureDataDir() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+  } catch (_) {}
+}
+
+function serializeExcelPayload() {
+  return JSON.stringify({
+    excelData,
+    excelMetadata
+  });
+}
+
+function saveExcelToDiskSync() {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(EXCEL_DATA_FILE, serializeExcelPayload());
+    excelDirty = false;
+    console.log('💾 Excel salvo em disco (sync).');
+  } catch (e) {
+    console.log('⚠️ Falha ao salvar Excel (sync):', e.message);
+  }
+}
+
+async function saveExcelToDisk() {
+  try {
+    ensureDataDir();
+    await fs.promises.writeFile(EXCEL_DATA_FILE, serializeExcelPayload());
+    excelDirty = false;
+    console.log('💾 Excel salvo em disco.');
+  } catch (e) {
+    console.log('⚠️ Falha ao salvar Excel:', e.message);
+  }
+}
+
+async function loadExcelFromDisk() {
+  try {
+    if (fs.existsSync(EXCEL_DATA_FILE)) {
+      const raw = await fs.promises.readFile(EXCEL_DATA_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.excelData) && parsed.excelMetadata) {
+        excelData = parsed.excelData;
+        excelMetadata = parsed.excelMetadata;
+        console.log(`📦 Excel carregado do disco: ${excelMetadata.fileName} (${excelData.length} itens)`);
+        // Recriar índices após carregar
+        rebuildExcelIndex();
+        // Notificar clientes conectados posteriormente
+        setTimeout(() => {
+          io.emit('excel-data-updated', { data: excelData, metadata: excelMetadata });
+        }, 500);
+      }
+    }
+  } catch (e) {
+    console.log('⚠️ Falha ao carregar Excel do disco:', e.message);
+  }
+}
+
+// Autosave periódico
+setInterval(() => {
+  if (excelDirty) {
+    saveExcelToDisk();
+  }
+}, AUTOSAVE_INTERVAL_MS);
 
 // Sistema para evitar notificações duplicadas
 let notifiedMatches = new Set(); // Armazenar TID+UHF já notificados
@@ -81,6 +158,86 @@ function isStreamValid() {
   return chainwayApi && 
          chainwayApi.client && 
          !chainwayApi.client.destroyed;
+}
+
+// ===== Índice de UHF (Excel) =====
+function inferUhfColumnName(headers) {
+  if (!headers || headers.length === 0) return null;
+  const found = headers.find(h => {
+    if (!h) return false;
+    const k = String(h).toLowerCase();
+    return k === 'uhf' || k.includes('uhf');
+  });
+  return found || null;
+}
+
+function indexItemByUHF(item, uhfColumnName) {
+  const keysToCheck = [];
+  if (uhfColumnName && item[uhfColumnName] !== undefined) {
+    keysToCheck.push(uhfColumnName);
+  } else {
+    // Fallback: procurar campo contendo UHF no item
+    Object.keys(item).forEach(key => {
+      const k = key.toLowerCase();
+      if (k === 'uhf' || k.includes('uhf')) keysToCheck.push(key);
+    });
+  }
+  for (const key of keysToCheck) {
+    const raw = item[key];
+    if (raw === undefined || raw === null) continue;
+    const normalized = String(raw).toUpperCase().trim();
+    if (!normalized) continue;
+    const existing = excelIndexByUHF.get(normalized);
+    if (existing) {
+      existing.push(item);
+    } else {
+      excelIndexByUHF.set(normalized, [item]);
+    }
+    break;
+  }
+}
+
+function rebuildExcelIndex(headers) {
+  excelIndexByUHF.clear();
+  excelUhfColumnName = headers ? inferUhfColumnName(headers) : excelUhfColumnName;
+  for (const item of excelData) {
+    indexItemByUHF(item, excelUhfColumnName);
+  }
+  console.log(`🗂️ Índice UHF reconstruído: ${excelIndexByUHF.size} chaves.`);
+}
+
+// ===== Fila de emissões de correspondência (throttle) =====
+let matchEventQueue = [];
+let pendingMatchKeys = new Set();
+let matchFlushTimer = null;
+const MATCH_FLUSH_MS = 100; // flush a cada 100ms
+const MATCH_MAX_PER_FLUSH = 30; // no máximo 30 emissões por flush
+
+function flushMatchQueue() {
+  try {
+    const batch = matchEventQueue.splice(0, MATCH_MAX_PER_FLUSH);
+    for (const item of batch) {
+      pendingMatchKeys.delete(item.matchKey);
+      io.emit('rfid-match-found', item.matchData);
+    }
+    if (matchEventQueue.length === 0 && matchFlushTimer) {
+      clearInterval(matchFlushTimer);
+      matchFlushTimer = null;
+    }
+  } catch (e) {
+    console.log('⚠️ Erro ao flush da fila de correspondências:', e.message);
+  }
+}
+
+function enqueueMatchEmit(matchData, matchKey) {
+  if (pendingMatchKeys.has(matchKey)) {
+    return; // já está na fila
+  }
+  pendingMatchKeys.add(matchKey);
+  matchEventQueue.push({ matchData, matchKey });
+  if (!matchFlushTimer) {
+    matchFlushTimer = setInterval(flushMatchQueue, MATCH_FLUSH_MS);
+  }
 }
 
 // Configurações para processamento por lotes
@@ -191,9 +348,9 @@ async function connectToRFIDReader() {
             readings = readings.slice(-MAX_READINGS_HISTORY);
           }
 
-          // Verificar se TID corresponde a UHF da planilha
+          // Verificar se TID corresponde a UHF da planilha usando índice O(1)
           let matchedItem = null;
-          if (tidValue && excelData.length > 0) {
+          if (tidValue && excelIndexByUHF.size > 0) {
             // Proteção contra loops - resetar contador a cada segundo
             const now = Date.now();
             if (now - lastComparisonReset > 1000) {
@@ -204,27 +361,12 @@ async function connectToRFIDReader() {
             // Verificar se não excedeu o limite de comparações
             if (comparisonCount < MAX_COMPARISONS_PER_SECOND) {
               comparisonCount++;
-              
-              matchedItem = excelData.find(item => {
-                // Buscar por coluna UHF (case-insensitive)
-                const uhfColumn = Object.keys(item).find(key => 
-                  key.toLowerCase().includes('uhf') || 
-                  key.toLowerCase() === 'uhf'
-                );
-                
-                if (uhfColumn && item[uhfColumn]) {
-                  const itemUHF = String(item[uhfColumn]).toUpperCase().trim();
-                  const tidClean = tidValue.toUpperCase().trim();
-                  
-                  // Log apenas quando há correspondência para evitar spam
-                  if (itemUHF === tidClean) {
-                    console.log(`🔍 CORRESPONDÊNCIA ENCONTRADA: "${itemUHF}" === "${tidClean}"`);
-                  }
-                  
-                  return itemUHF === tidClean;
-                }
-                return false;
-              });
+              const tidClean = tidValue.toUpperCase().trim();
+              const candidates = excelIndexByUHF.get(tidClean);
+              if (candidates && candidates.length > 0) {
+                matchedItem = candidates[0]; // pegar o primeiro correspondente
+                console.log(`🔍 CORRESPONDÊNCIA ENCONTRADA via índice: "${tidClean}"`);
+              }
             } else {
               console.log(`⚠️ Limite de comparações excedido (${MAX_COMPARISONS_PER_SECOND}/s) - pulando comparação`);
             }
@@ -261,9 +403,9 @@ async function connectToRFIDReader() {
                 timestamp: new Date().toISOString()
               };
               
-              console.log('📡 Emitindo evento rfid-match-found para todos os clientes...');
-              io.emit('rfid-match-found', matchData);
-              console.log('✅ Evento rfid-match-found emitido com sucesso');
+              console.log('📡 Enfileirando evento rfid-match-found...');
+              enqueueMatchEmit(matchData, matchKey);
+              console.log('✅ Evento rfid-match-found enfileirado com sucesso');
               
               // Remover da lista após cooldown (para permitir nova notificação no futuro)
               setTimeout(() => {
@@ -757,6 +899,10 @@ function processExcelAllAtOnce(dataRows, headers, fileName) {
     totalItems: processedData.length,
     columns: headers
   };
+  // Recriar índice por UHF
+  rebuildExcelIndex(headers);
+  // Sinalizar sujo e salvar em background
+  excelDirty = true;
   
   console.log(`✅ Planilha processada com sucesso:`);
   console.log(`  📁 Arquivo: ${fileName}`);
@@ -768,6 +914,8 @@ function processExcelAllAtOnce(dataRows, headers, fileName) {
     data: excelData,
     metadata: excelMetadata
   });
+  // Disparar save assíncrono
+  saveExcelToDisk();
   
   return {
     success: true,
@@ -839,6 +987,10 @@ async function processExcelInBatches(dataRows, headers, fileName) {
     
     // Adicionar lote aos dados
     excelData.push(...batchData);
+    // Indexar lote no índice UHF
+    for (const it of batchData) {
+      indexItemByUHF(it, excelUhfColumnName || inferUhfColumnName(headers));
+    }
     processedCount += batchData.length;
     
     // Atualizar metadados
@@ -862,6 +1014,8 @@ async function processExcelInBatches(dataRows, headers, fileName) {
       // Manter apenas os últimos itens
       excelData = excelData.slice(-MAX_EXCEL_ITEMS);
       console.log(`  ✅ Memória limpa, mantidos ${excelData.length} itens`);
+      // Reindexar por segurança após limpeza
+      rebuildExcelIndex(headers);
     }
     
     // Pausa pequena para não travar o servidor
@@ -873,6 +1027,7 @@ async function processExcelInBatches(dataRows, headers, fileName) {
   // Finalizar processamento
   excelMetadata.processingStatus = 'completed';
   excelMetadata.totalItems = excelData.length;
+  excelDirty = true;
   
   console.log(`✅ Planilha processada por lotes com sucesso:`);
   console.log(`  📁 Arquivo: ${fileName}`);
@@ -891,6 +1046,7 @@ async function processExcelInBatches(dataRows, headers, fileName) {
     data: excelData,
     metadata: excelMetadata
   });
+  saveExcelToDisk();
   
   return {
     success: true,
@@ -950,6 +1106,10 @@ function searchExcelItems(query, filters = {}) {
 function clearExcelData() {
   try {
     excelData = [];
+    excelIndexByUHF.clear();
+    excelUhfColumnName = null;
+    excelDirty = true;
+    saveExcelToDisk();
     excelMetadata = {
       fileName: '',
       uploadDate: null,
@@ -1962,5 +2122,7 @@ process.on('SIGINT', () => {
 server.listen(PORT, () => {
   console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
   console.log(`📡 Configuração inicial: ${rfidConfig.ip}:${rfidConfig.port}`);
+  // Carregar Excel do disco, se existir
+  loadExcelFromDisk();
 });
 

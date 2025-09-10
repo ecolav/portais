@@ -35,6 +35,8 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.0-dev || sudo apt-get install -y libwebkit2gtk-4.1-dev
           # JavaScriptCoreGTK (necessário para javascriptcore-rs-sys)
           sudo apt-get install -y libjavascriptcoregtk-4.1-dev || sudo apt-get install -y libjavascriptcoregtk-4.0-dev
+          # LibSoup3 para soup3-sys
+          sudo apt-get install -y libsoup-3.0-dev
           # Garantir PKG_CONFIG_PATH padrão
           echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
 

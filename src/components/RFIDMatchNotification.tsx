@@ -3,7 +3,7 @@ import { CheckCircle, X } from 'lucide-react';
 import { useRFIDMatches } from '../contexts/RFIDMatchesContext';
 
 const RFIDMatchNotification: React.FC = () => {
-  const { state, removeMatch } = useRFIDMatches();
+  const { state } = useRFIDMatches();
   const { matches } = state;
   const [displayMatches, setDisplayMatches] = useState<any[]>([]);
 

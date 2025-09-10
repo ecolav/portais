@@ -1,10 +1,8 @@
-import { useState } from 'react';
 import { 
   Home, 
   FileSpreadsheet, 
   CheckCircle, 
-  Settings,
-  BarChart3
+  
 } from 'lucide-react';
 
 interface NavigationProps {

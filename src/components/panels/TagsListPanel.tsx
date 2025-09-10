@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { List, Download, Trash2, Search, Filter } from 'lucide-react';
+import { useState } from 'react';
+import { List, Download, Trash2, Search } from 'lucide-react';
 import { useRFID } from '../../contexts/RFIDContext';
 import { useNotification } from '../../contexts/NotificationContext';
-import { RFIDTag } from '../../types';
 
 export function TagsListPanel() {
   const { state, clearTags } = useRFID();

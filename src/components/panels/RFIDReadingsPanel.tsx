@@ -1,4 +1,3 @@
-import React from 'react';
 import { Tag, Trash2, Eye, Clock, Signal } from 'lucide-react';
 
 interface RFIDReading {

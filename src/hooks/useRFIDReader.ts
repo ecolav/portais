@@ -25,7 +25,7 @@ interface ConnectionStatus {
   isConnected: boolean;
   isReading: boolean;
   totalReadings: number;
-  uniqueTIDs: number;
+  uniqueTags: number;
 }
 
 export function useRFIDReader() {
@@ -43,7 +43,7 @@ export function useRFIDReader() {
     isConnected: false,
     isReading: false,
     totalReadings: 0,
-    uniqueTIDs: 0
+    uniqueTags: 0
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -89,13 +89,13 @@ export function useRFIDReader() {
       }
     });
 
-    socket.on('readings-update', (data: { readings: RFIDReading[], totalReadings: number, uniqueTIDs?: number }) => {
+    socket.on('readings-update', (data: { readings: RFIDReading[], totalReadings: number, uniqueTIDs?: number, uniqueTags?: number }) => {
       console.log('📊 Atualização de leituras:', data);
       setReadings(data.readings);
       setStatus(current => ({ 
         ...current, 
         totalReadings: data.totalReadings,
-        uniqueTIDs: data.uniqueTIDs || 0
+        uniqueTags: (data.uniqueTags ?? data.uniqueTIDs) || 0
       }));
     });
 

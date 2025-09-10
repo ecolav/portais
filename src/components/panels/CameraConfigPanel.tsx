@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Settings, Monitor, Zap } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Camera, Monitor } from 'lucide-react';
 
 export default function CameraConfigPanel() {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);

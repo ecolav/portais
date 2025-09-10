@@ -84,7 +84,7 @@ export default function Dashboard() {
             />
             <StatsPanel 
               totalReadings={status.totalReadings}
-              uniqueTIDs={status.uniqueTIDs || 0}
+              uniqueTags={(status as any).uniqueTags ?? (status as any).uniqueTIDs ?? 0}
               isConnected={status.isConnected}
               isReading={status.isReading}
               readings={readings}

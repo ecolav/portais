@@ -1,4 +1,3 @@
-import React from 'react';
 import { Play, Square, Power, RefreshCw, Trash2, Zap } from 'lucide-react';
 
 interface ConnectionStatus {

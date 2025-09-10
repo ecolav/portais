@@ -1,15 +1,15 @@
-import React from 'react';
+//
 import { Hash, Tag } from 'lucide-react';
 
 interface StatsPanelProps {
   totalReadings: number;
-  uniqueTIDs: number;
+  uniqueTags: number;
   isConnected: boolean;
   isReading: boolean;
   readings: any[];
 }
 
-export default function StatsPanel({ totalReadings, uniqueTIDs, isConnected, isReading, readings }: StatsPanelProps) {
+export default function StatsPanel({ totalReadings, uniqueTags, isConnected, isReading }: StatsPanelProps) {
   return (
     <div className="bg-white rounded-lg shadow-md p-8">
       {/* Título Principal */}
@@ -44,7 +44,7 @@ export default function StatsPanel({ totalReadings, uniqueTIDs, isConnected, isR
             <Hash className="w-16 h-16 text-green-600" />
             <div>
               <div className="text-6xl font-bold text-green-600 mb-2">
-                {uniqueTIDs}
+                {uniqueTags}
               </div>
               <div className="text-2xl font-medium text-gray-700">
                 TIDs Únicos Detectados
@@ -75,7 +75,7 @@ export default function StatsPanel({ totalReadings, uniqueTIDs, isConnected, isR
         <div className="bg-purple-50 border border-purple-200 rounded-xl p-6 text-center">
           <Hash className="w-12 h-12 text-purple-600 mx-auto mb-3" />
           <div className="text-3xl font-bold text-purple-600 mb-2">
-            {uniqueTIDs > 0 ? (totalReadings / uniqueTIDs).toFixed(1) : '0'}
+            {uniqueTags > 0 ? (totalReadings / uniqueTags).toFixed(1) : '0'}
           </div>
           <div className="text-lg font-medium text-purple-800 mb-1">
             Média por TID

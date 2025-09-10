@@ -1,4 +1,3 @@
-import React from 'react';
 import { Wifi, WifiOff, Play, Pause, Tag } from 'lucide-react';
 
 interface HeaderProps {

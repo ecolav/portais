@@ -22,6 +22,7 @@ export interface Piece {
 // Tipos para tags lidas
 export interface RFIDTag {
   id: string;
+  tid?: string;
   epc: string;
   pieceNumber?: string;
   pieceName?: string;

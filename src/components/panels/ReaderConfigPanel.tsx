@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings, Wifi, Zap, Antenna, Save, RefreshCw } from 'lucide-react';
 import { API_CONFIG, apiRequest } from '../../config/api';
 

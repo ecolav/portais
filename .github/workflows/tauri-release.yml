@@ -31,10 +31,10 @@ jobs:
           # Tentar WebKitGTK 4.0 (Jammy) e cair para 4.1 (Noble) se necessário
           sudo apt-get install -y libwebkit2gtk-4.0-dev || sudo apt-get install -y libwebkit2gtk-4.1-dev
 
-      - name: Install frontend dependencies
+      - name: Install frontend dependencies (root)
         run: npm ci
 
-      - name: Build frontend
+      - name: Build frontend (root)
         run: npm run build
 
       - name: Prepare Node sidecar (Linux x64)

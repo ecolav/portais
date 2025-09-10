@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "com.ecolav.portais",
   "build": {
-    "frontendDist": "dist",
+    "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": "npm run build --prefix .."
   },
   "app": {
     "windows": [

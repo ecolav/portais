@@ -52,6 +52,12 @@ jobs:
           cp /tmp/node-v18.20.4-linux-x64/bin/node src-tauri/bin/node
           chmod +x src-tauri/bin/node
 
+      - name: Ensure bin glob has a match
+        run: |
+          mkdir -p src-tauri/bin
+          touch src-tauri/bin/.keep
+          ls -la src-tauri/bin
+
       - name: Bundle server resources
         run: |
           mkdir -p src-tauri/resources/server

@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,10 +31,8 @@ jobs:
           sudo apt-get install -y build-essential curl wget pkg-config xz-utils patchelf libssl-dev
           # Bibliotecas do WebView e GTK
           sudo apt-get install -y libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
-          # Tentar WebKitGTK 4.0 (Jammy) e cair para 4.1 (Noble) se necessário
-          sudo apt-get install -y libwebkit2gtk-4.0-dev || sudo apt-get install -y libwebkit2gtk-4.1-dev
-          # JavaScriptCoreGTK (necessário para javascriptcore-rs-sys)
-          sudo apt-get install -y libjavascriptcoregtk-4.1-dev || sudo apt-get install -y libjavascriptcoregtk-4.0-dev
+          # WebKitGTK 4.1 e JavaScriptCoreGTK 4.1 (Ubuntu 24.04)
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev
           # LibSoup3 para soup3-sys
           sudo apt-get install -y libsoup-3.0-dev
           # Garantir PKG_CONFIG_PATH padrão

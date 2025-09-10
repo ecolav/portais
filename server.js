@@ -73,7 +73,7 @@ let excelMetadata = {
 };
 
 // Persistência em disco
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = process.env.ECOLAV_DATA_DIR ? path.resolve(process.env.ECOLAV_DATA_DIR) : path.join(__dirname, 'data');
 const EXCEL_DATA_FILE = path.join(DATA_DIR, 'excel_data.json');
 let excelDirty = false;
 const AUTOSAVE_INTERVAL_MS = 15000; // 15s

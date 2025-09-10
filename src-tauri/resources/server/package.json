@@ -1,0 +1,24 @@
+{
+  "name": "rfid-server",
+  "version": "1.0.0",
+  "description": "Servidor backend para comunicação com leitor RFID",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1",
+    "xlsx": "^0.18.5",
+    "chainway-rfid": "^1.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["rfid", "tcp", "socket.io", "express"],
+  "author": "RFID Portal",
+  "license": "MIT"
+}

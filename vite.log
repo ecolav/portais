@@ -1,0 +1,36 @@
+
+> portal-rfid-typescript@1.0.0 dev
+> vite
+
+
+  VITE v4.5.14  ready in 427 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://192.168.99.43:3000/
+2:31:32 PM [vite] hmr update /src/components/Sidebar.tsx, /src/index.css
+2:31:32 PM [vite] hmr update /src/pages/ReaderPage.tsx, /src/index.css
+2:31:32 PM [vite] hmr update /src/pages/ReadingsPage.tsx, /src/index.css
+2:31:32 PM [vite] hmr update /src/pages/TagsPage.tsx, /src/index.css
+2:31:32 PM [vite] hmr update /src/pages/SettingsPage.tsx, /src/index.css
+2:31:32 PM [vite] hmr update /src/pages/DashboardPage.tsx, /src/index.css
+2:31:32 PM [vite] hmr update /src/App.tsx, /src/index.css
+2:31:32 PM [vite] hmr update /src/pages/ExcelPage.tsx, /src/index.css
+2:31:32 PM [vite] hmr update /src/pages/MatchesPage.tsx, /src/index.css
+2:32:09 PM [vite] hmr update /src/components/panels/TagsListPanel.tsx, /src/index.css
+2:32:31 PM [vite] hmr update /src/components/panels/TagsListPanel.tsx, /src/index.css
+2:35:33 PM [vite] hmr update /src/pages/DashboardPage.tsx, /src/index.css
+2:35:40 PM [vite] hmr update /src/App.tsx, /src/index.css
+2:35:43 PM [vite] hmr update /src/App.tsx, /src/index.css
+2:35:54 PM [vite] hmr update /src/pages/ReadingsPage.tsx, /src/index.css
+2:36:08 PM [vite] hmr update /src/pages/TagsPage.tsx, /src/index.css
+2:36:26 PM [vite] hmr update /src/pages/DashboardPage.tsx, /src/index.css
+2:36:26 PM [vite] hmr update /src/App.tsx, /src/index.css
+2:36:26 PM [vite] hmr update /src/pages/ReadingsPage.tsx, /src/index.css
+2:36:26 PM [vite] hmr update /src/pages/TagsPage.tsx, /src/index.css
+2:40:18 PM [vite] page reload index.html
+2:40:28 PM [vite] page reload index.html
+2:50:18 PM [vite] hmr update /src/components/panels/ControlPanel.tsx, /src/index.css
+2:50:21 PM [vite] hmr update /src/components/panels/ControlPanel.tsx, /src/index.css
+2:52:37 PM [vite] hmr update /src/components/panels/ControlPanel.tsx, /src/index.css
+4:15:26 PM [vite] hmr update /src/pages/ReaderPage.tsx, /src/index.css
+4:15:53 PM [vite] page reload src/components/panels/PowerDiagnosticsPanel.tsx

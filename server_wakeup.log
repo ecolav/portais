@@ -1,0 +1,393 @@
+🚀 Servidor RFID rodando na porta 3001
+📡 Configuração padrão: 192.168.99.201:8888
+🔧 Comandos customizados definidos:
+  - SET_POWER: function
+  - SET_ANTENNAS: function
+  - APPLY_CONFIG: object
+🗂️ Servindo frontend estático de /home/idtrack/Desktop/portais-main/dist
+🚀 Servidor rodando em http://localhost:3001
+📡 Configuração inicial: 192.168.99.201:8888
+📦 Excel carregado do disco: ItemsBase_04-09-2025_19-09-55.xlsx (10031 itens)
+🗂️ Índice UHF reconstruído: 9203 chaves.
+🔌 Cliente conectado: LXJWCDfSkkpqYVllAAAB
+🔌 Cliente conectado: 0WDBpqznRE_uMidnAAAD
+🔌 Cliente conectado: RE6iJdwAEyjrAPiBAAAF
+🔌 Tentando conectar ao leitor RFID: 192.168.99.201:8888
+  ⚡ Potência configurada: 20 dBm
+  📡 Antenas configuradas: 1, 2, 3, 4
+Connected to 192.168.99.201:8888
+🔍 receiverAttached = false
+✅ Registrando callbacks received() pela primeira vez...
+✅ Registrando listener RAW no socket TCP...
+✅ Registrando callback chainwayApi.received()...
+🔍 Métodos disponíveis na biblioteca chainway-rfid:
+  - connect: function
+  - disconnect: function
+  - startScan: function
+  - stopScan: function
+  - received: function
+  - on: undefined
+✅ Conectado ao leitor RFID em 192.168.99.201:8888!
+🔍 Verificação de conexão iniciada (10s) - Apenas verificação de atividade
+🔍 Monitoramento de memória iniciado (intervalo: 60s)
+ℹ️ Leitor conectado. Use "Iniciar Leitura" para começar a ler tags.
+🟢 Iniciando leitura contínua em 192.168.99.201:8888...
+  🔄 Enviando comando RESET para acordar o leitor...
+Message sent: <Buffer a5 5a 00 07 70 77 0d 0a>
+  ✅ Comando RESET enviado
+  ⚡ Configurando potência para acordar o leitor...
+Message sent: <Buffer a5 5a 00 08 82 27 14 bd 0d 0a>
+  ✅ Potência configurada: 20 dBm
+  📡 Configurando antenas para acordar o leitor...
+Message sent: <Buffer a5 5a 00 08 82 28 0f b9 0d 0a>
+  ✅ Antenas configuradas: 1, 2, 3, 4
+  🔍 Criando comando startScan...
+  📡 Comando criado: A55A000A822710BF0D0A
+  📤 Enviando comando startScan via send()...
+Message sent: <Buffer a5 5a 00 0a 82 27 10 bf 0d 0a>
+  ✅ Comando startScan enviado e confirmado via send()
+✅ Leitura contínua iniciada (com sequência de wake-up)
+  📊 Status: isReading=true, lastReadingTime=2025-10-07T15:39:10.541Z
+💾 Memória atual: 25MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+🔌 Desconectando do leitor RFID (192.168.99.201:8888)...
+🔍 Verificação de conexão parada
+🔍 Monitoramento de memória parado
+Message sent: <Buffer c8 8c 00 08 8c 84 0d 0a>
+✅ Desconectado do leitor RFID
+Disconnected from server
+🔌 Tentando conectar ao leitor RFID: 192.168.99.201:8888
+  ⚡ Potência configurada: 20 dBm
+  📡 Antenas configuradas: 1, 2, 3, 4
+Connected to 192.168.99.201:8888
+🔍 receiverAttached = false
+✅ Registrando callbacks received() pela primeira vez...
+✅ Registrando listener RAW no socket TCP...
+✅ Registrando callback chainwayApi.received()...
+🔍 Métodos disponíveis na biblioteca chainway-rfid:
+  - connect: function
+  - disconnect: function
+  - startScan: function
+  - stopScan: function
+  - received: function
+  - on: undefined
+✅ Conectado ao leitor RFID em 192.168.99.201:8888!
+🔍 Verificação de conexão iniciada (10s) - Apenas verificação de atividade
+🔍 Monitoramento de memória iniciado (intervalo: 60s)
+ℹ️ Leitor conectado. Use "Iniciar Leitura" para começar a ler tags.
+🟢 Iniciando leitura contínua em 192.168.99.201:8888...
+  🔄 Enviando comando RESET para acordar o leitor...
+Message sent: <Buffer a5 5a 00 07 70 77 0d 0a>
+  ✅ Comando RESET enviado
+  ⚡ Configurando potência para acordar o leitor...
+Message sent: <Buffer a5 5a 00 08 82 27 14 bd 0d 0a>
+  ✅ Potência configurada: 20 dBm
+  📡 Configurando antenas para acordar o leitor...
+Message sent: <Buffer a5 5a 00 08 82 28 0f b9 0d 0a>
+  ✅ Antenas configuradas: 1, 2, 3, 4
+  🔍 Criando comando startScan...
+  📡 Comando criado: A55A000A822710BF0D0A
+  📤 Enviando comando startScan via send()...
+Message sent: <Buffer a5 5a 00 0a 82 27 10 bf 0d 0a>
+  ✅ Comando startScan enviado e confirmado via send()
+✅ Leitura contínua iniciada (com sequência de wake-up)
+  📊 Status: isReading=true, lastReadingTime=2025-10-07T15:39:26.312Z
+🔌 Cliente desconectado: 0WDBpqznRE_uMidnAAAD
+🔌 Cliente desconectado: LXJWCDfSkkpqYVllAAAB
+🔌 Cliente desconectado: RE6iJdwAEyjrAPiBAAAF
+🔌 Cliente conectado: XDNLkgACrbheWBk7AAAJ
+🔌 Cliente conectado: ptV0GjXdS73R9V7VAAAK
+🔌 Cliente conectado: Jqub2xXb605T47rEAAAL
+⚙️ Configuração atualizada:
+  📡 IP: 192.168.99.201 → 192.168.99.201
+  🔌 Porta: 8888 → 8888
+  ⚡ Potência: 20 → 20 dBm
+  📡 Antenas: [ 1, 2, 3, 4 ] → [ 1, 2, 3, 4 ]
+  🔊 Som: true → true
+🔄 Reconectando com nova configuração...
+🔌 Desconectando do leitor RFID (192.168.99.201:8888)...
+🔍 Verificação de conexão parada
+🔍 Monitoramento de memória parado
+Message sent: <Buffer c8 8c 00 08 8c 84 0d 0a>
+✅ Desconectado do leitor RFID
+🔄 Reconectando automaticamente com nova configuração...
+🔌 Tentando conectar ao leitor RFID: 192.168.99.201:8888
+  ⚡ Potência configurada: 20 dBm
+  📡 Antenas configuradas: 1, 2, 3, 4
+Disconnected from server
+Connected to 192.168.99.201:8888
+🔍 receiverAttached = false
+✅ Registrando callbacks received() pela primeira vez...
+✅ Registrando listener RAW no socket TCP...
+✅ Registrando callback chainwayApi.received()...
+🔍 Métodos disponíveis na biblioteca chainway-rfid:
+  - connect: function
+  - disconnect: function
+  - startScan: function
+  - stopScan: function
+  - received: function
+  - on: undefined
+✅ Conectado ao leitor RFID em 192.168.99.201:8888!
+🔍 Verificação de conexão iniciada (10s) - Apenas verificação de atividade
+🔍 Monitoramento de memória iniciado (intervalo: 60s)
+ℹ️ Leitor conectado. Use "Iniciar Leitura" para começar a ler tags.
+✅ Reconectado com nova configuração! Use "Iniciar Leitura" para começar.
+📡 BUFFER RAW: <Buffer c8 8c 00 09 8d 01 85 0d 0a>
+📏 Tamanho: 9 bytes
+🔢 Hex: C88C00098D01850D0A
+📡 Tag recebida (PARSED): {}
+📡 Tag recebida: TID=, EPC=, Antena=0, RSSI=0
+🛑 stopContinuousReading() chamada por:
+  📍 Stack trace: Error
+    at stopContinuousReading (/home/idtrack/Desktop/portais-main/server.js:1433:22)
+    at Socket.<anonymous> (/home/idtrack/Desktop/portais-main/server.js:1597:5)
+    at Socket.emit (node:events:517:28)
+    at Socket.emitUntyped (/home/idtrack/Desktop/portais-main/node_modules/socket.io/dist/typed-events.js:69:22)
+    at /home/idtrack/Desktop/portais-main/node_modules/socket.io/dist/socket.js:697:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:77:11)
+⚠️ Não está lendo
+🟢 Iniciando leitura contínua em 192.168.99.201:8888...
+  🔄 Enviando comando RESET para acordar o leitor...
+Message sent: <Buffer a5 5a 00 07 70 77 0d 0a>
+  ✅ Comando RESET enviado
+  ⚡ Configurando potência para acordar o leitor...
+Message sent: <Buffer a5 5a 00 08 82 27 14 bd 0d 0a>
+  ✅ Potência configurada: 20 dBm
+  📡 Configurando antenas para acordar o leitor...
+Message sent: <Buffer a5 5a 00 08 82 28 0f b9 0d 0a>
+  ✅ Antenas configuradas: 1, 2, 3, 4
+  🔍 Criando comando startScan...
+  📡 Comando criado: A55A000A822710BF0D0A
+  📤 Enviando comando startScan via send()...
+Message sent: <Buffer a5 5a 00 0a 82 27 10 bf 0d 0a>
+  ✅ Comando startScan enviado e confirmado via send()
+✅ Leitura contínua iniciada (com sequência de wake-up)
+  📊 Status: isReading=true, lastReadingTime=2025-10-07T15:39:37.020Z
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória: 27MB / 28MB
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória: 27MB / 28MB
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória: 27MB / 28MB
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória: 27MB / 28MB
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 26MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória: 26MB / 28MB
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 26MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 26MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória: 26MB / 28MB
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 26MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória: 27MB / 28MB
+🔌 Verificando se conexão ainda está ativa...
+⚙️ Configuração atualizada:
+  📡 IP: 192.168.99.201 → 192.168.99.202
+  🔌 Porta: 8888 → 8888
+  ⚡ Potência: 20 → 20 dBm
+  📡 Antenas: [ 1, 2, 3, 4 ] → [ 1, 2, 3, 4 ]
+  🔊 Som: true → true
+🔄 Reconectando com nova configuração...
+🔌 Desconectando do leitor RFID (192.168.99.202:8888)...
+🔍 Verificação de conexão parada
+🔍 Monitoramento de memória parado
+Message sent: <Buffer c8 8c 00 08 8c 84 0d 0a>
+✅ Desconectado do leitor RFID
+🔄 Reconectando automaticamente com nova configuração...
+🔌 Tentando conectar ao leitor RFID: 192.168.99.202:8888
+  ⚡ Potência configurada: 20 dBm
+  📡 Antenas configuradas: 1, 2, 3, 4
+Disconnected from server
+[Chainway-api] Err to Connect Hardware, please check your IP!
+Connected to 192.168.99.202:8888
+🔍 receiverAttached = false
+✅ Registrando callbacks received() pela primeira vez...
+✅ Registrando listener RAW no socket TCP...
+✅ Registrando callback chainwayApi.received()...
+🔍 Métodos disponíveis na biblioteca chainway-rfid:
+  - connect: function
+  - disconnect: function
+  - startScan: function
+  - stopScan: function
+  - received: function
+  - on: undefined
+✅ Conectado ao leitor RFID em 192.168.99.202:8888!
+🔍 Verificação de conexão iniciada (10s) - Apenas verificação de atividade
+🔍 Monitoramento de memória iniciado (intervalo: 60s)
+ℹ️ Leitor conectado. Use "Iniciar Leitura" para começar a ler tags.
+✅ Reconectado com nova configuração! Use "Iniciar Leitura" para começar.
+Connection closed
+🚨 INTERCEPTADO: Evento CLOSE da biblioteca chainway-rfid
+  📊 hadError: true
+  📊 Status atual: isReading= false
+  📊 isConnected: true
+🔌 Desconectando do leitor RFID (192.168.99.202:8888)...
+🔍 Verificação de conexão parada
+🔍 Monitoramento de memória parado
+Message sent: <Buffer c8 8c 00 08 8c 84 0d 0a>
+✅ Desconectado do leitor RFID
+Disconnected from server
+🔌 Tentando conectar ao leitor RFID: 192.168.99.202:8888
+  ⚡ Potência configurada: 20 dBm
+  📡 Antenas configuradas: 1, 2, 3, 4
+Connected to 192.168.99.202:8888
+🔍 receiverAttached = false
+✅ Registrando callbacks received() pela primeira vez...
+✅ Registrando listener RAW no socket TCP...
+✅ Registrando callback chainwayApi.received()...
+🔍 Métodos disponíveis na biblioteca chainway-rfid:
+  - connect: function
+  - disconnect: function
+  - startScan: function
+  - stopScan: function
+  - received: function
+  - on: undefined
+✅ Conectado ao leitor RFID em 192.168.99.202:8888!
+🔍 Verificação de conexão iniciada (10s) - Apenas verificação de atividade
+🔍 Monitoramento de memória iniciado (intervalo: 60s)
+ℹ️ Leitor conectado. Use "Iniciar Leitura" para começar a ler tags.
+🟢 Iniciando leitura contínua em 192.168.99.202:8888...
+  🔄 Enviando comando RESET para acordar o leitor...
+Message sent: <Buffer a5 5a 00 07 70 77 0d 0a>
+  ✅ Comando RESET enviado
+  ⚡ Configurando potência para acordar o leitor...
+Message sent: <Buffer a5 5a 00 08 82 27 14 bd 0d 0a>
+  ✅ Potência configurada: 20 dBm
+  📡 Configurando antenas para acordar o leitor...
+Message sent: <Buffer a5 5a 00 08 82 28 0f b9 0d 0a>
+  ✅ Antenas configuradas: 1, 2, 3, 4
+  🔍 Criando comando startScan...
+  📡 Comando criado: A55A000A822710BF0D0A
+  📤 Enviando comando startScan via send()...
+Message sent: <Buffer a5 5a 00 0a 82 27 10 bf 0d 0a>
+  ✅ Comando startScan enviado e confirmado via send()
+✅ Leitura contínua iniciada (com sequência de wake-up)
+  📊 Status: isReading=true, lastReadingTime=2025-10-07T15:46:39.624Z
+⚙️ Configuração atualizada:
+  📡 IP: 192.168.99.202 → 192.168.99.203
+  🔌 Porta: 8888 → 8888
+  ⚡ Potência: 20 → 20 dBm
+  📡 Antenas: [ 1, 2, 3, 4 ] → [ 1, 2, 3, 4 ]
+  🔊 Som: true → true
+🔄 Reconectando com nova configuração...
+🔌 Desconectando do leitor RFID (192.168.99.203:8888)...
+🔍 Verificação de conexão parada
+🔍 Monitoramento de memória parado
+Message sent: <Buffer c8 8c 00 08 8c 84 0d 0a>
+✅ Desconectado do leitor RFID
+🔄 Reconectando automaticamente com nova configuração...
+🔌 Tentando conectar ao leitor RFID: 192.168.99.203:8888
+  ⚡ Potência configurada: 20 dBm
+  📡 Antenas configuradas: 1, 2, 3, 4
+Disconnected from server
+Connected to 192.168.99.203:8888
+🔍 receiverAttached = false
+✅ Registrando callbacks received() pela primeira vez...
+✅ Registrando listener RAW no socket TCP...
+✅ Registrando callback chainwayApi.received()...
+🔍 Métodos disponíveis na biblioteca chainway-rfid:
+  - connect: function
+  - disconnect: function
+  - startScan: function
+  - stopScan: function
+  - received: function
+  - on: undefined
+✅ Conectado ao leitor RFID em 192.168.99.203:8888!
+🔍 Verificação de conexão iniciada (10s) - Apenas verificação de atividade
+🔍 Monitoramento de memória iniciado (intervalo: 60s)
+ℹ️ Leitor conectado. Use "Iniciar Leitura" para começar a ler tags.
+✅ Reconectado com nova configuração! Use "Iniciar Leitura" para começar.
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Desconectando do leitor RFID (192.168.99.203:8888)...
+🔍 Verificação de conexão parada
+🔍 Monitoramento de memória parado
+Message sent: <Buffer c8 8c 00 08 8c 84 0d 0a>
+✅ Desconectado do leitor RFID
+Disconnected from server
+🔌 Tentando conectar ao leitor RFID: 192.168.99.203:8888
+  ⚡ Potência configurada: 20 dBm
+  📡 Antenas configuradas: 1, 2, 3, 4
+Connected to 192.168.99.203:8888
+🔍 receiverAttached = false
+✅ Registrando callbacks received() pela primeira vez...
+✅ Registrando listener RAW no socket TCP...
+✅ Registrando callback chainwayApi.received()...
+🔍 Métodos disponíveis na biblioteca chainway-rfid:
+  - connect: function
+  - disconnect: function
+  - startScan: function
+  - stopScan: function
+  - received: function
+  - on: undefined
+✅ Conectado ao leitor RFID em 192.168.99.203:8888!
+🔍 Verificação de conexão iniciada (10s) - Apenas verificação de atividade
+🔍 Monitoramento de memória iniciado (intervalo: 60s)
+ℹ️ Leitor conectado. Use "Iniciar Leitura" para começar a ler tags.
+🟢 Iniciando leitura contínua em 192.168.99.203:8888...
+  🔄 Enviando comando RESET para acordar o leitor...
+Message sent: <Buffer a5 5a 00 07 70 77 0d 0a>
+  ✅ Comando RESET enviado
+  ⚡ Configurando potência para acordar o leitor...
+Message sent: <Buffer a5 5a 00 08 82 27 14 bd 0d 0a>
+  ✅ Potência configurada: 20 dBm
+  📡 Configurando antenas para acordar o leitor...
+Message sent: <Buffer a5 5a 00 08 82 28 0f b9 0d 0a>
+  ✅ Antenas configuradas: 1, 2, 3, 4
+  🔍 Criando comando startScan...
+  📡 Comando criado: A55A000A822710BF0D0A
+  📤 Enviando comando startScan via send()...
+Message sent: <Buffer a5 5a 00 0a 82 27 10 bf 0d 0a>
+  ✅ Comando startScan enviado e confirmado via send()
+✅ Leitura contínua iniciada (com sequência de wake-up)
+  📊 Status: isReading=true, lastReadingTime=2025-10-07T15:46:50.801Z
+🔌 Desconectando do leitor RFID (192.168.99.203:8888)...
+🔍 Verificação de conexão parada
+🔍 Monitoramento de memória parado
+Message sent: <Buffer c8 8c 00 08 8c 84 0d 0a>
+✅ Desconectado do leitor RFID
+Disconnected from server

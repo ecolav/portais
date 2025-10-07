@@ -318,9 +318,29 @@ async function connectToRFIDReader() {
     await chainwayApi.connect(rfidConfig.ip, rfidConfig.port);
     isConnected = true;
 
+    console.log(`🔍 receiverAttached = ${receiverAttached}`);
+    
     if (!receiverAttached) {
+      console.log('✅ Registrando callbacks received() pela primeira vez...');
+      
+      // Interceptar dados RAW ANTES do parsing
+      if (chainwayApi.client) {
+        console.log('✅ Registrando listener RAW no socket TCP...');
+        chainwayApi.client.on('data', (rawBuffer) => {
+          console.log('📡 BUFFER RAW:', rawBuffer);
+          console.log('📏 Tamanho:', rawBuffer.length, 'bytes');
+          console.log('🔢 Hex:', rawBuffer.toString('hex').toUpperCase());
+        });
+      } else {
+        console.log('⚠️ chainwayApi.client não está disponível!');
+      }
+      
+      console.log('✅ Registrando callback chainwayApi.received()...');
       chainwayApi.received((data) => {
         try {
+          // LOG RAW para debug
+          console.log('📡 Tag recebida (PARSED):', JSON.stringify(data));
+          
           // data: { epc, tid, ant, rssi }
           const epcValue = (data && data.epc) ? String(data.epc).toUpperCase() : '';
           const tidValue = (data && data.tid) ? String(data.tid).toUpperCase() : '';
@@ -454,67 +474,9 @@ async function connectToRFIDReader() {
         });
       }
       
-      // Interceptar todas as chamadas para stopScan para debug
-      if (typeof chainwayApi.stopScan === 'function') {
-        const originalStopScan = chainwayApi.stopScan;
-        chainwayApi.stopScan = async function(...args) {
-          const stackTrace = new Error().stack;
-          console.log('🚨 INTERCEPTADO: chainwayApi.stopScan() chamado por:');
-          console.log('  📍 Stack trace:', stackTrace);
-          console.log('  📊 Status atual: isReading=', isReading);
-          console.log('  📊 isConnected:', isConnected);
-          
-          // Verificar se o stream ainda está válido
-          if (chainwayApi.client && chainwayApi.client.destroyed) {
-            console.log('  ⚠️ Stream já foi destruído - pulando stopScan');
-            isReading = false;
-            return;
-          }
-          
-          // Só permitir se for chamado explicitamente pelo usuário
-          if (isReading) {
-            console.log('  ⚠️ stopScan chamado enquanto está lendo - investigando...');
-          }
-          
-          try {
-            return await originalStopScan.apply(this, args);
-          } catch (error) {
-            if (error.code === 'ERR_STREAM_DESTROYED') {
-              console.log('  ⚠️ Stream destruído durante stopScan - marcando como parado');
-              isReading = false;
-              return;
-            }
-            throw error;
-          }
-        };
-      }
-      
-      // Interceptar startScan para verificar stream válido
-      if (typeof chainwayApi.startScan === 'function') {
-        const originalStartScan = chainwayApi.startScan;
-        chainwayApi.startScan = async function(...args) {
-          console.log('🚨 INTERCEPTADO: chainwayApi.startScan() chamado');
-          console.log('  📊 Status atual: isReading=', isReading);
-          console.log('  📊 isConnected:', isConnected);
-          console.log('  📊 Stream válido:', isStreamValid());
-          
-          // Verificar se o stream ainda está válido
-          if (!isStreamValid()) {
-            console.log('  ⚠️ Stream inválido - não é possível iniciar leitura');
-            throw new Error('Stream TCP destruído - reconecte primeiro');
-          }
-          
-          try {
-            return await originalStartScan.apply(this, args);
-          } catch (error) {
-            if (error.code === 'ERR_STREAM_DESTROYED') {
-              console.log('  ⚠️ Stream destruído durante startScan');
-              throw new Error('Stream TCP destruído - reconecte primeiro');
-            }
-            throw error;
-          }
-        };
-      }
+      // INTERCEPTADORES REMOVIDOS
+      // A biblioteca chainway-rfid é SÍNCRONA, não ASYNC
+      // Tornar funções async causava problemas no startScan/stopScan
       
       // Interceptar o evento 'close' da biblioteca para evitar desconexão automática
       if (chainwayApi.client && typeof chainwayApi.client.on === 'function') {
@@ -575,10 +537,10 @@ async function connectToRFIDReader() {
     console.log(`✅ Conectado ao leitor RFID em ${rfidConfig.ip}:${rfidConfig.port}!`);
     
     // Iniciar sistema de keep-alive
-    startKeepAlive();
+    // startKeepAlive();  // DESATIVADO - causa conflitos
     startConnectionCheck();
-    startReadingHealthCheck();
-    startAutoRestart(); // Iniciar auto-restart da leitura
+    // startReadingHealthCheck();  // DESATIVADO - causa conflitos
+    // startAutoRestart(); // DESATIVADO - para e reinicia a leitura desnecessariamente
     startMemoryCheck(); // Iniciar monitoramento de memória
     
     // NÃO iniciar leitura automaticamente - apenas conectar
@@ -1399,16 +1361,13 @@ async function startContinuousReading() {
   }
   try {
     console.log(`🟢 Iniciando leitura contínua em ${rfidConfig.ip}:${rfidConfig.port}...`);
-    console.log(`  ⚡ Potência atual: ${rfidConfig.power} dBm`);
-    console.log(`  📡 Antenas ativas: ${rfidConfig.antennas.join(', ')}`);
     
-    console.log('  🔍 Enviando comando startScan...');
+    // VERSÃO SIMPLES QUE FUNCIONAVA - SEM COMPLICAÇÃO
     await chainwayApi.startScan();
-    console.log('  ✅ Comando startScan executado com sucesso');
     
     isReading = true;
-    lastActivityTime = Date.now(); // Atualizar tempo de atividade
-    lastReadingTime = Date.now(); // Registrar início da leitura
+    lastActivityTime = Date.now();
+    lastReadingTime = Date.now();
     console.log('✅ Leitura contínua iniciada');
     console.log(`  📊 Status: isReading=${isReading}, lastReadingTime=${new Date(lastReadingTime).toISOString()}`);
   } catch (error) {
@@ -1430,20 +1389,16 @@ async function stopContinuousReading() {
   }
   try {
     console.log('🛑 Parando leitura contínua...');
-    console.log(`  📊 Status antes: isReading=${isReading}, lastReadingTime=${lastReadingTime ? new Date(lastReadingTime).toISOString() : 'null'}`);
     
-    console.log('  🔍 Enviando comando stopScan...');
+    // VERSÃO SIMPLES QUE FUNCIONAVA
     await chainwayApi.stopScan();
-    console.log('  ✅ Comando stopScan executado com sucesso');
     
     isReading = false;
-    lastActivityTime = Date.now(); // Atualizar tempo de atividade
-    lastReadingTime = null; // Limpar tempo de leitura
+    lastActivityTime = Date.now();
+    lastReadingTime = null;
     console.log('✅ Leitura contínua parada');
-    console.log(`  📊 Status depois: isReading=${isReading}, lastReadingTime=${lastReadingTime}`);
   } catch (error) {
     console.error('❌ Erro ao parar leitura:', error.message || error);
-    console.error('  📍 Stack trace:', error.stack || 'Não disponível');
   }
 }
 
@@ -2117,6 +2072,15 @@ process.on('SIGINT', () => {
 });
 
 
+
+// Servir frontend estático (Vite build em ./dist)
+const distPath = path.join(__dirname, 'dist');
+if (fs.existsSync(distPath)) {
+  console.log('🗂️ Servindo frontend estático de', distPath);
+  app.use(express.static(distPath));
+} else {
+  console.log('ℹ️ Pasta dist não encontrada; execute "npm run build" para habilitar frontend estático.');
+}
 
 // Iniciar servidor
 server.listen(PORT, () => {

@@ -1,0 +1,64 @@
+🚀 Servidor RFID rodando na porta 3001
+📡 Configuração padrão: 192.168.99.201:8888
+🔧 Comandos customizados definidos:
+  - SET_POWER: function
+  - SET_ANTENNAS: function
+  - APPLY_CONFIG: object
+🗂️ Servindo frontend estático de /home/idtrack/Desktop/portais-main/dist
+🚀 Servidor rodando em http://localhost:3001
+📡 Configuração inicial: 192.168.99.201:8888
+📦 Excel carregado do disco: ItemsBase_04-09-2025_19-09-55.xlsx (10031 itens)
+🗂️ Índice UHF reconstruído: 9203 chaves.
+🔌 Cliente conectado: y1VrJyKm5JIuZnDZAAAB
+🔌 Cliente conectado: GKb8yWbC8ta-Am2cAAAE
+🔌 Cliente conectado: vlfW0KF9AkB_RqzPAAAF
+🔌 Cliente conectado: F68SM0-dUI78lI6XAAAJ
+🔌 Cliente conectado: -dztfp1UUMU4s3gCAAAK
+🔌 Cliente conectado: 1NhmFb2S4xAloWQTAAAL
+🔌 Tentando conectar ao leitor RFID: 192.168.99.201:8888
+  ⚡ Potência configurada: 20 dBm
+  📡 Antenas configuradas: 1, 2, 3, 4
+Connected to 192.168.99.201:8888
+🔍 Métodos disponíveis na biblioteca chainway-rfid:
+  - connect: function
+  - disconnect: function
+  - startScan: function
+  - stopScan: function
+  - received: function
+  - on: undefined
+✅ Conectado ao leitor RFID em 192.168.99.201:8888!
+🔍 Verificação de conexão iniciada (10s) - Apenas verificação de atividade
+🔍 Monitoramento de memória iniciado (intervalo: 60s)
+ℹ️ Leitor conectado. Use "Iniciar Leitura" para começar a ler tags.
+🟢 Iniciando leitura contínua em 192.168.99.201:8888...
+  ⚡ Potência atual: 20 dBm
+  📡 Antenas ativas: 1, 2, 3, 4
+  🔍 Enviando comando startScan...
+Message sent: <Buffer a5 5a 00 0a 82 27 10 bf 0d 0a>
+  ✅ Comando startScan executado com sucesso
+✅ Leitura contínua iniciada
+  📊 Status: isReading=true, lastReadingTime=2025-10-06T19:49:17.709Z
+📡 BUFFER RAW: <Buffer a5 5a 00 09 8d 01 85 0d 0a>
+📏 Tamanho: 9 bytes
+🔢 Hex: A55A00098D01850D0A
+📡 Tag recebida (PARSED): {}
+📡 Tag recebida: TID=, EPC=, Antena=0, RSSI=0
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória: 27MB / 28MB
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória: 27MB / 28MB
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...

@@ -1,6 +1,7 @@
 import { useRFIDReader } from '../hooks/useRFIDReader';
 import ReaderConfigPanel from '../components/panels/ReaderConfigPanel';
 import ControlPanel from '../components/panels/ControlPanel';
+import PowerDiagnosticsPanel from '../components/panels/PowerDiagnosticsPanel';
 import PageHeader from '../components/PageHeader';
 
 export default function ReaderPage() {
@@ -17,6 +18,10 @@ export default function ReaderPage() {
     updateConfig,
     clearError
   } = useRFIDReader();
+
+  const handlePowerChange = (power: number) => {
+    updateConfig({ power });
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -46,6 +51,12 @@ export default function ReaderPage() {
           onClearReadings={clearReadings}
         />
       </div>
+
+      {/* Painel de Diagnóstico de Potência */}
+      <PowerDiagnosticsPanel 
+        currentPower={config.power} 
+        onPowerChange={handlePowerChange}
+      />
     </div>
   );
 }

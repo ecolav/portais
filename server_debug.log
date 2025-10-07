@@ -1,0 +1,105 @@
+🚀 Servidor RFID rodando na porta 3001
+📡 Configuração padrão: 192.168.99.201:8888
+🔧 Comandos customizados definidos:
+  - SET_POWER: function
+  - SET_ANTENNAS: function
+  - APPLY_CONFIG: object
+🗂️ Servindo frontend estático de /home/idtrack/Desktop/portais-main/dist
+🚀 Servidor rodando em http://localhost:3001
+📡 Configuração inicial: 192.168.99.201:8888
+📦 Excel carregado do disco: ItemsBase_04-09-2025_19-09-55.xlsx (10031 itens)
+🗂️ Índice UHF reconstruído: 9203 chaves.
+🔌 Cliente conectado: aiLPgQ84HgsXr6iRAAAD
+🔌 Cliente conectado: CjJHHr2cJfTGRpWaAAAE
+🔌 Cliente conectado: kcZngbOvqKt32jG4AAAF
+🔌 Cliente conectado: A4VSQYbrqy-DVtAYAAAJ
+🔌 Cliente conectado: QX1FI3htkXQhWOgxAAAK
+🔌 Cliente conectado: vm2O8HPeXV5uUFf0AAAL
+🔌 Tentando conectar ao leitor RFID: 192.168.99.201:8888
+  ⚡ Potência configurada: 20 dBm
+  📡 Antenas configuradas: 1, 2, 3, 4
+Connected to 192.168.99.201:8888
+🔍 Métodos disponíveis na biblioteca chainway-rfid:
+  - connect: function
+  - disconnect: function
+  - startScan: function
+  - stopScan: function
+  - received: function
+  - on: undefined
+✅ Conectado ao leitor RFID em 192.168.99.201:8888!
+🔍 Verificação de conexão iniciada (10s) - Apenas verificação de atividade
+🔍 Monitoramento de memória iniciado (intervalo: 60s)
+ℹ️ Leitor conectado. Use "Iniciar Leitura" para começar a ler tags.
+🟢 Iniciando leitura contínua em 192.168.99.201:8888...
+  ⚡ Potência atual: 20 dBm
+  📡 Antenas ativas: 1, 2, 3, 4
+  🔍 Enviando comando startScan...
+Message sent: <Buffer a5 5a 00 0a 82 27 10 bf 0d 0a>
+  ✅ Comando startScan executado com sucesso
+✅ Leitura contínua iniciada
+  📊 Status: isReading=true, lastReadingTime=2025-10-06T19:47:37.417Z
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+⚠️ ATENÇÃO: Potência configurada muito alta (30 dBm)
+  ⚠️ Potências altas podem causar interferência e problemas de estabilidade
+⚙️ Configuração atualizada:
+  📡 IP: 192.168.99.201 → 192.168.99.201
+  🔌 Porta: 8888 → 8888
+  ⚡ Potência: 20 → 30 dBm
+  📡 Antenas: [ 1, 2, 3, 4 ] → [ 1, 2, 3, 4 ]
+  🔊 Som: true → true
+🔄 Reconectando com nova configuração...
+🔌 Desconectando do leitor RFID (192.168.99.201:8888)...
+🔍 Verificação de conexão parada
+🔍 Monitoramento de memória parado
+Message sent: <Buffer c8 8c 00 08 8c 84 0d 0a>
+✅ Desconectado do leitor RFID
+🔄 Reconectando automaticamente com nova configuração...
+🔌 Tentando conectar ao leitor RFID: 192.168.99.201:8888
+  ⚡ Potência configurada: 30 dBm
+  📡 Antenas configuradas: 1, 2, 3, 4
+Disconnected from server
+Connected to 192.168.99.201:8888
+🔍 Métodos disponíveis na biblioteca chainway-rfid:
+  - connect: function
+  - disconnect: function
+  - startScan: function
+  - stopScan: function
+  - received: function
+  - on: undefined
+✅ Conectado ao leitor RFID em 192.168.99.201:8888!
+🔍 Verificação de conexão iniciada (10s) - Apenas verificação de atividade
+🔍 Monitoramento de memória iniciado (intervalo: 60s)
+ℹ️ Leitor conectado. Use "Iniciar Leitura" para começar a ler tags.
+✅ Reconectado com nova configuração! Use "Iniciar Leitura" para começar.
+📡 Tag recebida (RAW): {}
+📡 Tag recebida: TID=, EPC=, Antena=0, RSSI=0
+🛑 stopContinuousReading() chamada por:
+  📍 Stack trace: Error
+    at stopContinuousReading (/home/idtrack/Desktop/portais-main/server.js:1368:22)
+    at /home/idtrack/Desktop/portais-main/server.js:1729:11
+    at Layer.handleRequest (/home/idtrack/Desktop/portais-main/node_modules/router/lib/layer.js:152:17)
+    at next (/home/idtrack/Desktop/portais-main/node_modules/router/lib/route.js:157:13)
+    at Route.dispatch (/home/idtrack/Desktop/portais-main/node_modules/router/lib/route.js:117:3)
+    at handle (/home/idtrack/Desktop/portais-main/node_modules/router/index.js:435:11)
+    at Layer.handleRequest (/home/idtrack/Desktop/portais-main/node_modules/router/lib/layer.js:152:17)
+    at /home/idtrack/Desktop/portais-main/node_modules/router/index.js:295:15
+    at processParams (/home/idtrack/Desktop/portais-main/node_modules/router/index.js:582:12)
+    at next (/home/idtrack/Desktop/portais-main/node_modules/router/index.js:291:5)
+⚠️ Não está lendo
+🟢 Iniciando leitura contínua em 192.168.99.201:8888...
+  ⚡ Potência atual: 30 dBm
+  📡 Antenas ativas: 1, 2, 3, 4
+  🔍 Enviando comando startScan...
+Message sent: <Buffer a5 5a 00 0a 82 27 10 bf 0d 0a>
+  ✅ Comando startScan executado com sucesso
+✅ Leitura contínua iniciada
+  📊 Status: isReading=true, lastReadingTime=2025-10-06T19:48:16.231Z
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+🔌 Verificando se conexão ainda está ativa...
+💾 Memória atual: 27MB | Excel: 10031 itens | Notificações: 0
+🔌 Verificando se conexão ainda está ativa...

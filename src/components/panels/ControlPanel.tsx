@@ -1,4 +1,4 @@
-import { Play, Square, Power, RefreshCw, Trash2, Zap } from 'lucide-react';
+import { Play, Square, Power, Trash2 } from 'lucide-react';
 
 interface ConnectionStatus {
   isConnected: boolean;
@@ -12,7 +12,7 @@ interface ControlPanelProps {
   onDisconnect: () => void;
   onStartReading: () => void;
   onStopReading: () => void;
-  onReadSingle: () => void;
+  onReadSingle?: () => void;
   onClearReadings: () => void;
 }
 
@@ -22,7 +22,6 @@ export default function ControlPanel({
   onDisconnect,
   onStartReading,
   onStopReading,
-  onReadSingle,
   onClearReadings
 }: ControlPanelProps) {
   return (

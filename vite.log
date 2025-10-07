@@ -34,3 +34,20 @@
 2:52:37 PM [vite] hmr update /src/components/panels/ControlPanel.tsx, /src/index.css
 4:15:26 PM [vite] hmr update /src/pages/ReaderPage.tsx, /src/index.css
 4:15:53 PM [vite] page reload src/components/panels/PowerDiagnosticsPanel.tsx
+
+> portal-rfid-typescript@1.0.0 dev
+> vite
+
+
+  VITE v4.5.14  ready in 405 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://192.168.99.43:3000/
+4:20:10 PM [vite] hmr update /src/components/panels/ReaderConfigPanel.tsx, /src/index.css
+4:20:28 PM [vite] hmr update /src/components/panels/PowerDiagnosticsPanel.tsx, /src/index.css
+4:21:03 PM [vite] hmr update /src/components/panels/PowerDiagnosticsPanel.tsx, /src/index.css
+4:21:18 PM [vite] hmr update /src/pages/ReaderPage.tsx, /src/index.css
+4:21:20 PM [vite] hmr update /src/pages/ReaderPage.tsx, /src/index.css
+4:21:41 PM [vite] hmr update /src/components/panels/ReaderConfigPanel.tsx, /src/index.css
+4:21:51 PM [vite] hmr update /src/components/panels/ReaderConfigPanel.tsx, /src/index.css
+4:22:04 PM [vite] page reload dist/index.html

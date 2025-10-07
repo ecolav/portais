@@ -1,57 +1,18 @@
-import { Zap, AlertTriangle, Info, CheckCircle, Radio } from 'lucide-react';
+import { Zap, AlertTriangle, Info, CheckCircle } from 'lucide-react';
 
 interface PowerDiagnosticsPanelProps {
   currentPower: number;
   onPowerChange: (power: number) => void;
+  onApplyPower: (power: number) => void;
+  isApplying?: boolean;
 }
 
-export default function PowerDiagnosticsPanel({ currentPower, onPowerChange }: PowerDiagnosticsPanelProps) {
+export default function PowerDiagnosticsPanel({ currentPower, onPowerChange, onApplyPower, isApplying }: PowerDiagnosticsPanelProps) {
   const powerPresets = [
-    {
-      name: 'Muito Baixa',
-      power: 10,
-      range: '~1-2m',
-      icon: '🟢',
-      color: 'green',
-      use: 'Teste em bancada, tags muito próximas',
-      warning: 'Alcance muito limitado'
-    },
-    {
-      name: 'Baixa',
-      power: 15,
-      range: '~2-4m',
-      icon: '🟡',
-      color: 'yellow',
-      use: 'Leitura de tags próximas, evitar interferências',
-      warning: 'Pode não detectar tags distantes'
-    },
-    {
-      name: 'Média (Recomendada)',
-      power: 20,
-      range: '~4-6m',
-      icon: '🟠',
-      color: 'blue',
-      use: 'Uso geral, boa relação alcance/estabilidade',
-      warning: null
-    },
-    {
-      name: 'Alta',
-      power: 25,
-      range: '~6-8m',
-      icon: '🔴',
-      color: 'orange',
-      use: 'Tags distantes, ambientes grandes',
-      warning: 'Pode causar leituras duplicadas'
-    },
-    {
-      name: 'Máxima',
-      power: 30,
-      range: '~8-10m',
-      icon: '⚠️',
-      color: 'red',
-      use: 'Apenas quando absolutamente necessário',
-      warning: 'ATENÇÃO: Pode causar interferências, leituras duplicadas e instabilidade'
-    }
+    { name: 'Baixa', power: 10, range: '1-2m', color: 'green' },
+    { name: 'Média', power: 20, range: '4-6m', color: 'blue' },
+    { name: 'Alta', power: 25, range: '6-8m', color: 'orange' },
+    { name: 'Máxima', power: 30, range: '8-10m', color: 'red' }
   ];
 
   const getDiagnosis = () => {
@@ -104,114 +65,100 @@ export default function PowerDiagnosticsPanel({ currentPower, onPowerChange }: P
   const Icon = diagnosis.icon;
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="bg-white rounded-lg border p-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
         <Zap className="w-5 h-5 text-orange-500" />
-        <h3 className="text-lg font-semibold text-gray-900">Diagnóstico de Potência RFID</h3>
-      </div>
+        Potência de Transmissão
+      </h3>
 
-      {/* Status Atual */}
-      <div className={`mb-6 p-4 rounded-lg border-2 ${
-        diagnosis.type === 'danger' ? 'bg-red-50 border-red-200' :
-        diagnosis.type === 'warning' ? 'bg-yellow-50 border-yellow-200' :
-        diagnosis.type === 'success' ? 'bg-green-50 border-green-200' :
-        'bg-blue-50 border-blue-200'
-      }`}>
-        <div className="flex items-start gap-3">
-          <Icon className={`w-6 h-6 flex-shrink-0 ${
-            diagnosis.type === 'danger' ? 'text-red-600' :
-            diagnosis.type === 'warning' ? 'text-yellow-600' :
-            diagnosis.type === 'success' ? 'text-green-600' :
-            'text-blue-600'
-          }`} />
-          <div className="flex-1">
-            <h4 className={`font-semibold mb-1 ${
-              diagnosis.type === 'danger' ? 'text-red-800' :
-              diagnosis.type === 'warning' ? 'text-yellow-800' :
-              diagnosis.type === 'success' ? 'text-green-800' :
-              'text-blue-800'
-            }`}>
-              {diagnosis.title}
-            </h4>
-            <p className={`text-sm mb-2 ${
-              diagnosis.type === 'danger' ? 'text-red-700' :
-              diagnosis.type === 'warning' ? 'text-yellow-700' :
-              diagnosis.type === 'success' ? 'text-green-700' :
-              'text-blue-700'
-            }`}>
-              {diagnosis.message}
-            </p>
-            <ul className={`text-xs space-y-1 ${
-              diagnosis.type === 'danger' ? 'text-red-600' :
-              diagnosis.type === 'warning' ? 'text-yellow-600' :
-              diagnosis.type === 'success' ? 'text-green-600' :
-              'text-blue-600'
-            }`}>
-              {diagnosis.suggestions.map((suggestion, idx) => (
-                <li key={idx}>• {suggestion}</li>
-              ))}
-            </ul>
+      {/* Controle de Potência */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm text-gray-600">Atual</span>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-blue-600">{currentPower}</div>
+            <div className="text-xs text-gray-500">dBm</div>
           </div>
+          <span className="text-sm text-gray-600">0-30</span>
+        </div>
+
+        <input
+          type="range"
+          min="0"
+          max="30"
+          value={currentPower}
+          onChange={(e) => onPowerChange(parseInt(e.target.value))}
+          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+        />
+
+        <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <span>Baixa</span>
+          <span>Alta</span>
         </div>
       </div>
 
-      {/* Presets de Potência */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-          <Radio className="w-4 h-4" />
-          Configurações Recomendadas
-        </h4>
-        
+      {/* Presets Rápidos */}
+      <div className="grid grid-cols-4 gap-2 mb-6">
         {powerPresets.map((preset) => (
           <button
             key={preset.power}
-            onClick={() => onPowerChange(preset.power)}
-            className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+            onClick={() => {
+              onPowerChange(preset.power);
+              onApplyPower(preset.power);
+            }}
+            className={`p-2 rounded border text-center transition ${
               currentPower === preset.power
-                ? `border-${preset.color}-500 bg-${preset.color}-50`
-                : 'border-gray-200 hover:border-gray-300 bg-white'
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-200 hover:border-gray-300'
             }`}
           >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xl">{preset.icon}</span>
-                  <span className="font-semibold text-gray-900">{preset.name}</span>
-                  <span className="text-sm font-mono text-gray-600">{preset.power} dBm</span>
-                </div>
-                <div className="text-xs text-gray-600 space-y-1">
-                  <p>📏 <strong>Alcance:</strong> {preset.range}</p>
-                  <p>✅ <strong>Uso:</strong> {preset.use}</p>
-                  {preset.warning && (
-                    <p className="text-orange-600">
-                      ⚠️ <strong>Aviso:</strong> {preset.warning}
-                    </p>
-                  )}
-                </div>
-              </div>
-              {currentPower === preset.power && (
-                <CheckCircle className="w-5 h-5 text-green-500" />
-              )}
-            </div>
+            <div className="text-lg font-bold text-gray-900">{preset.power}</div>
+            <div className="text-xs text-gray-600">{preset.name}</div>
+            <div className="text-xs text-gray-500">{preset.range}</div>
           </button>
         ))}
       </div>
 
-      {/* Dicas Importantes */}
-      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h5 className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
-          <Info className="w-4 h-4" />
-          Dicas Importantes
-        </h5>
-        <ul className="text-xs text-blue-700 space-y-1">
-          <li>• <strong>Comece com 20 dBm</strong> e ajuste conforme necessário</li>
-          <li>• <strong>Potência alta ≠ melhor desempenho</strong> - pode causar problemas</li>
-          <li>• <strong>Se tiver muitas leituras duplicadas:</strong> reduza a potência</li>
-          <li>• <strong>Se não detectar tags:</strong> aumente gradualmente</li>
-          <li>• <strong>Ambiente com metal:</strong> pode precisar de potência maior</li>
-          <li>• <strong>Múltiplas antenas próximas:</strong> use potência menor</li>
-        </ul>
-      </div>
+      {/* Alerta de Diagnóstico */}
+      {diagnosis.type !== 'info' && (
+        <div className={`p-3 rounded-lg border flex items-start gap-2 ${
+          diagnosis.type === 'danger' ? 'bg-red-50 border-red-200' :
+          diagnosis.type === 'warning' ? 'bg-yellow-50 border-yellow-200' :
+          'bg-green-50 border-green-200'
+        }`}>
+          <Icon className={`w-5 h-5 flex-shrink-0 ${
+            diagnosis.type === 'danger' ? 'text-red-600' :
+            diagnosis.type === 'warning' ? 'text-yellow-600' :
+            'text-green-600'
+          }`} />
+          <div>
+            <p className={`text-sm font-medium ${
+              diagnosis.type === 'danger' ? 'text-red-800' :
+              diagnosis.type === 'warning' ? 'text-yellow-800' :
+              'text-green-800'
+            }`}>
+              {diagnosis.title}
+            </p>
+            <p className={`text-xs ${
+              diagnosis.type === 'danger' ? 'text-red-600' :
+              diagnosis.type === 'warning' ? 'text-yellow-600' :
+              'text-green-600'
+            }`}>
+              {diagnosis.message}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Botão Aplicar */}
+      <button
+        onClick={() => onApplyPower(currentPower)}
+        disabled={isApplying}
+        className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition disabled:bg-gray-400"
+      >
+        <Zap className="w-4 h-4" />
+        {isApplying ? 'Aplicando...' : 'Aplicar Potência'}
+      </button>
     </div>
   );
 }

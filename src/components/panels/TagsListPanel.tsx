@@ -3,7 +3,7 @@ import { List, Download, Trash2, Search } from 'lucide-react';
 import { useRFID } from '../../contexts/RFIDContext';
 import { useNotification } from '../../contexts/NotificationContext';
 
-export function TagsListPanel() {
+export default function TagsListPanel() {
   const { state, clearTags } = useRFID();
   const { showSuccess, showWarning } = useNotification();
   const { tags } = state;

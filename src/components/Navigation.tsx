@@ -18,26 +18,21 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChange }) =>
   ];
 
   return (
-    <nav className="bg-white shadow-lg border-b">
-      <div className="max-w-7xl mx-auto px-4">
+    <nav className="bg-white border-b">
+      <div className="max-w-7xl mx-auto px-6">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg overflow-hidden shadow-md">
-              <img 
-                src="/ecolav.jpg" 
-                alt="Logo Ecolav" 
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-800">Portal Ecolav</h1>
-              <p className="text-xs text-gray-500 -mt-1">Sistema RFID</p>
-            </div>
+            <img 
+              src="/ecolav.jpg" 
+              alt="Logo" 
+              className="w-8 h-8 rounded"
+            />
+            <h1 className="text-lg font-semibold text-gray-900">Portal Ecolav</h1>
           </div>
 
           {/* Menu */}
-          <div className="flex space-x-1">
+          <div className="flex gap-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentPage === item.id;
@@ -46,10 +41,10 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChange }) =>
                 <button
                   key={item.id}
                   onClick={() => onPageChange(item.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition ${
                     isActive
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                      ? 'bg-primary-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <Icon className="w-4 h-4" />

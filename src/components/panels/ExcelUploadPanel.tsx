@@ -136,7 +136,7 @@ const ExcelUploadPanel: React.FC = () => {
               <Trash2 size={16} />
               Limpar Dados
             </button>
-          </div>
+      </div>
         )}
           </div>
           
@@ -190,7 +190,7 @@ const ExcelUploadPanel: React.FC = () => {
             <p className="text-xs text-blue-600 mt-2">{processingStatus}</p>
           </div>
         )}
-        
+
         {/* Status de Processamento */}
         {processingStatus && !isProcessingInBatches && (
           <div className="mt-4 bg-green-50 rounded-lg p-4">
@@ -267,21 +267,21 @@ const ExcelUploadPanel: React.FC = () => {
               </div>
         </div>
 
-            <button
+              <button
               onClick={() => setShowFilters(!showFilters)}
               className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
+              >
               <Filter size={16} />
               Filtros
-            </button>
-            
-            <button
+              </button>
+              
+              <button
               onClick={handleSearch}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
+              >
               Buscar
-            </button>
-          </div>
+              </button>
+        </div>
 
           {/* Filtros de Colunas */}
           {showFilters && (

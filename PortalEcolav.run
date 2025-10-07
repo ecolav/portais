@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -e
+
+# Diretório base do projeto (onde este script está)
+BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Runtime Node portátil
+RUNTIME_DIR="$BASE_DIR/runtime"
+NODE_BIN="$RUNTIME_DIR/node/bin/node"
+NPM_BIN="$RUNTIME_DIR/node/bin/npm"
+
+# Fallback para Node do sistema
+if [ ! -x "$NODE_BIN" ]; then
+  if command -v node >/dev/null 2>&1; then
+    NODE_BIN="$(command -v node)"
+    NPM_BIN="$(command -v npm)"
+  else
+    echo "Node não encontrado. Instale Node >= 18 ou inclua em runtime/node." >&2
+    exit 1
+  fi
+fi
+
+# Diretório de dados persistentes
+export ECOLAV_DATA_DIR="$BASE_DIR/data"
+mkdir -p "$ECOLAV_DATA_DIR"
+
+# Ir para a pasta do projeto
+cd "$BASE_DIR"
+
+# Iniciar servidor backend, se não estiver rodando
+if ! pgrep -f "node server.js" >/dev/null 2>&1; then
+  echo "Iniciando servidor backend..."
+  nohup "$NODE_BIN" server.js >> "$BASE_DIR/server.log" 2>&1 &
+  sleep 2
+fi
+
+# Iniciar servidor frontend (Vite), se não estiver rodando
+if ! pgrep -f "vite" >/dev/null 2>&1; then
+  echo "Iniciando servidor frontend..."
+  nohup "$NPM_BIN" run dev >> "$BASE_DIR/vite.log" 2>&1 &
+  sleep 5
+fi
+
+# URLs da aplicação
+BACKEND_URL="http://localhost:3001"
+FRONTEND_URL="http://localhost:3000"
+
+echo "================================================"
+echo "✅ Portal Ecolav iniciado com sucesso!"
+echo "================================================"
+echo "Frontend: $FRONTEND_URL"
+echo "Backend:  $BACKEND_URL"
+echo "Logs Backend: $BASE_DIR/server.log"
+echo "Logs Frontend: $BASE_DIR/vite.log"
+echo "================================================"
+
+# Tentar abrir no navegador (opcional)
+if command -v xdg-open >/dev/null 2>&1; then
+  xdg-open "$FRONTEND_URL" >/dev/null 2>&1 || true
+fi

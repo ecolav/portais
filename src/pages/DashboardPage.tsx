@@ -1,120 +1,107 @@
 import { useRFIDReader } from '../hooks/useRFIDReader';
-import ReaderConfigPanel from '../components/panels/ReaderConfigPanel';
-import ControlPanel from '../components/panels/ControlPanel';
 import StatsPanel from '../components/panels/StatsPanel';
-import AudioConfigPanel from '../components/panels/AudioConfigPanel';
-import CameraConfigPanel from '../components/panels/CameraConfigPanel';
-import NotificationMethodPanel from '../components/panels/NotificationMethodPanel';
+import AlertsPanel from '../components/panels/AlertsPanel';
 import PageHeader from '../components/PageHeader';
+import { Radio, List, CheckCircle, FileSpreadsheet } from 'lucide-react';
 
-export default function DashboardPage() {
-  const {
-    config,
-    readings,
-    status,
-    error,
-    connectToReader,
-    disconnectFromReader,
-    startContinuousReading,
-    stopContinuousReading,
-    readSingleTag,
-    clearReadings,
-    updateConfig,
-    clearError
-  } = useRFIDReader();
+interface DashboardPageProps {
+  onNavigate: (page: string) => void;
+}
+
+export default function DashboardPage({ onNavigate }: DashboardPageProps) {
+  const { readings, status, error } = useRFIDReader();
+
+  const quickLinks = [
+    { id: 'reader', label: 'Leitor RFID', icon: Radio, color: 'blue' },
+    { id: 'readings', label: 'Ver Leituras', icon: List, color: 'green' },
+    { id: 'matches', label: 'Correspondências', icon: CheckCircle, color: 'purple' },
+    { id: 'excel', label: 'Planilha Excel', icon: FileSpreadsheet, color: 'orange' }
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Cabeçalho com Logo */}
-        <PageHeader 
-          title="Dashboard - Controle do Sistema"
-          subtitle="Configure, controle e monitore o sistema RFID"
+    <div className="p-6 space-y-6">
+      <PageHeader 
+        title="Dashboard"
+        subtitle="Visão geral do sistema RFID"
+      />
+
+      {/* Status Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <StatsPanel 
+          totalReadings={status.totalReadings}
+          uniqueTags={(status as any).uniqueTags ?? (status as any).uniqueTIDs ?? 0}
+          isConnected={status.isConnected}
+          isReading={status.isReading}
+          readings={readings}
         />
+        
+        <AlertsPanel 
+          lowStockCount={0}
+          pendingCount={error ? 1 : 0}
+        />
+      </div>
 
-        {/* Painel de Erros */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span className="text-red-800 font-medium">Erro do Sistema</span>
-              </div>
+      {/* Quick Links */}
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Acesso Rápido</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickLinks.map((link) => {
+            const Icon = link.icon;
+            const colorClasses = {
+              blue: 'border-blue-200 bg-blue-50 hover:border-blue-300 hover:bg-blue-100',
+              green: 'border-green-200 bg-green-50 hover:border-green-300 hover:bg-green-100',
+              purple: 'border-purple-200 bg-purple-50 hover:border-purple-300 hover:bg-purple-100',
+              orange: 'border-orange-200 bg-orange-50 hover:border-orange-300 hover:bg-orange-100'
+            };
+            const iconColorClasses = {
+              blue: 'text-blue-600',
+              green: 'text-green-600',
+              purple: 'text-purple-600',
+              orange: 'text-orange-600'
+            };
+            
+            return (
               <button
-                onClick={clearError}
-                className="text-red-500 hover:text-red-700"
+                key={link.id}
+                onClick={() => onNavigate(link.id)}
+                className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition ${colorClasses[link.color as keyof typeof colorClasses]}`}
               >
-                ✕
+                <Icon className={`w-8 h-8 ${iconColorClasses[link.color as keyof typeof iconColorClasses]}`} />
+                <span className="text-sm font-medium text-gray-700">{link.label}</span>
               </button>
-            </div>
-            <p className="text-red-700 mt-2">{error}</p>
-          </div>
-        )}
-
-        {/* Seção 1: Configuração e Controle do Leitor */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">📡 Leitor RFID</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ReaderConfigPanel 
-              config={config} 
-              onConfigChange={updateConfig} 
-            />
-            <ControlPanel
-              status={status}
-              onConnect={connectToReader}
-              onDisconnect={disconnectFromReader}
-              onStartReading={startContinuousReading}
-              onStopReading={stopContinuousReading}
-              onReadSingle={readSingleTag}
-              onClearReadings={clearReadings}
-            />
-          </div>
+            );
+          })}
         </div>
+      </div>
 
-        {/* Seção 2: Estatísticas e Status */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">📊 Estatísticas do Sistema</h2>
-          <StatsPanel 
-            totalReadings={status.totalReadings}
-            uniqueTags={(status as any).uniqueTags ?? (status as any).uniqueTIDs ?? 0}
-            isConnected={status.isConnected}
-            isReading={status.isReading}
-            readings={readings}
-          />
-        </div>
-
-        {/* Seção 3: Configurações do Sistema */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">⚙️ Configurações do Sistema</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <AudioConfigPanel 
-              soundEnabled={config.soundEnabled}
-              onSoundToggle={(enabled) => updateConfig({ soundEnabled: enabled })}
-            />
-            <CameraConfigPanel />
-            <NotificationMethodPanel />
-          </div>
-        </div>
-
-        {/* Status do Sistema */}
-        <div className="bg-white rounded-lg shadow-md p-4">
-          <div className="flex items-center justify-center gap-6 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
+      {/* System Status */}
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Status do Sistema</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
               <div className={`w-2 h-2 rounded-full ${status.isConnected ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-              <span>Leitor: {status.isConnected ? 'Conectado' : 'Desconectado'}</span>
+              <span className="text-sm text-gray-600">Conexão</span>
             </div>
-            <div className="flex items-center gap-2">
+            <p className="font-semibold text-gray-900">{status.isConnected ? 'Conectado' : 'Desconectado'}</p>
+          </div>
+          
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
               <div className={`w-2 h-2 rounded-full ${status.isReading ? 'bg-blue-500' : 'bg-gray-400'}`}></div>
-              <span>Leitura: {status.isReading ? 'Ativa' : 'Parada'}</span>
+              <span className="text-sm text-gray-600">Leitura</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-              <span>Total: {status.totalReadings} leituras</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-              <span>TIDs: {new Set(readings.map(r => r.tid || r.epc)).size} únicos</span>
-            </div>
+            <p className="font-semibold text-gray-900">{status.isReading ? 'Ativa' : 'Parada'}</p>
+          </div>
+          
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <span className="text-sm text-gray-600">Total de Leituras</span>
+            <p className="text-2xl font-bold text-gray-900">{status.totalReadings}</p>
+          </div>
+          
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <span className="text-sm text-gray-600">Tags Únicas</span>
+            <p className="text-2xl font-bold text-gray-900">{new Set(readings.map(r => r.tid || r.epc)).size}</p>
           </div>
         </div>
       </div>

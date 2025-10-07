@@ -1,8 +1,12 @@
 import { useState } from 'react';
-import Navigation from './components/Navigation';
+import Sidebar from './components/Sidebar';
 import DashboardPage from './pages/DashboardPage';
+import ReaderPage from './pages/ReaderPage';
+import ReadingsPage from './pages/ReadingsPage';
+import TagsPage from './pages/TagsPage';
 import ExcelPage from './pages/ExcelPage';
 import MatchesPage from './pages/MatchesPage';
+import SettingsPage from './pages/SettingsPage';
 import RFIDMatchNotification from './components/RFIDMatchNotification';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ExcelProvider } from './contexts/ExcelContext';
@@ -15,13 +19,21 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <DashboardPage />;
+        return <DashboardPage onNavigate={setCurrentPage} />;
+      case 'reader':
+        return <ReaderPage />;
+      case 'readings':
+        return <ReadingsPage />;
+      case 'tags':
+        return <TagsPage />;
       case 'excel':
         return <ExcelPage />;
       case 'matches':
         return <MatchesPage />;
+      case 'settings':
+        return <SettingsPage />;
       default:
-        return <DashboardPage />;
+        return <DashboardPage onNavigate={setCurrentPage} />;
     }
   };
 
@@ -29,9 +41,9 @@ function App() {
     <NotificationProvider>
       <ExcelProvider>
         <RFIDMatchesProvider>
-          <div className="App">
-            <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
-            <main>
+          <div className="flex h-screen bg-gray-50">
+            <Sidebar currentPage={currentPage} onPageChange={setCurrentPage} />
+            <main className="flex-1 overflow-y-auto">
               {renderPage()}
             </main>
             <RFIDMatchNotification />

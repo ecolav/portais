@@ -1,0 +1,43 @@
+
+================================================
+Portal Ecolav - Como executar
+================================================
+
+🚀 MÉTODO MAIS FÁCIL:
+------------------
+Execute o script:
+  ./PortalEcolav.run
+
+Isso vai iniciar:
+  - Frontend (Vite) em http://localhost:3000
+  - Backend (Node) em http://localhost:3001
+  - Abrir automaticamente o navegador
+
+================================================
+
+1) Iniciar
+   - Terminal:
+     cd ~/Desktop/portais-main
+     ./PortalEcolav.run
+
+2) Acessar
+   - Abra no navegador: http://localhost:3001
+
+3) Parar o servidor
+   - Terminal:
+     pkill -f "node server.js"
+
+4) Logs
+   - Arquivo: ~/Desktop/portais-main/server.log
+
+5) Levar para outra máquina
+   - Copie a pasta inteira "portais-main" para o outro computador
+   - Dê permissão de execução (se necessário):
+     chmod +x ./PortalEcolav.run
+   - Execute: ./PortalEcolav.run
+
+Observações
+- O script tenta usar o Node embutido em runtime/node; se não existir, usa o Node do sistema (>= 18).
+- Se o navegador não abrir automaticamente, acesse manualmente a URL acima.
+
+

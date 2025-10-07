@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { API_CONFIG } from '../config/api';
+import { Socket } from 'socket.io-client';
+import { socketManager } from '../services/socketManager';
 
 // Interfaces para o protocolo correto descoberto
 interface RFIDReaderConfig {
@@ -50,46 +50,43 @@ export function useRFIDReader() {
   const socketRef = useRef<Socket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  // Conectar ao servidor backend
+  // Conectar ao servidor backend usando Singleton - MANTÉM CONEXÃO PERSISTENTE
   useEffect(() => {
-    console.log('🔌 Conectando ao servidor backend...');
-    const socket = io(API_CONFIG.BASE_URL);
+    console.log('🔌 Obtendo socket do gerenciador...');
+    const socket = socketManager.getSocket();
     socketRef.current = socket;
 
-    // Eventos de conexão
-    socket.on('connect', () => {
+    // Configurar handlers de eventos (idempotente - pode ser chamado múltiplas vezes)
+    const handleConnect = () => {
       console.log('✅ Conectado ao servidor backend');
       setError(null);
-    });
+    };
 
-    socket.on('disconnect', () => {
+    const handleDisconnect = () => {
       console.log('🔌 Desconectado do servidor backend');
       setStatus(current => ({ ...current, isConnected: false, isReading: false }));
-    });
+    };
 
-    // Eventos de status
-    socket.on('connection-status', (data: ConnectionStatus) => {
+    const handleConnectionStatus = (data: ConnectionStatus) => {
       console.log('📊 Status da conexão:', data);
       setStatus(data);
-    });
+    };
 
-    socket.on('reading-status', (data: { isReading: boolean }) => {
+    const handleReadingStatus = (data: { isReading: boolean }) => {
       console.log('📊 Status da leitura:', data);
       setStatus(current => ({ ...current, isReading: data.isReading }));
-    });
+    };
 
-    // Eventos de leituras RFID
-    socket.on('rfid-reading', (reading: RFIDReading) => {
+    const handleRFIDReading = (reading: RFIDReading) => {
       console.log('🎯 Nova leitura RFID:', reading);
-      setReadings(current => [reading, ...current.slice(0, 99)]); // Manter últimas 100
+      setReadings(current => [reading, ...current.slice(0, 99)]);
       
-      // Tocar som se habilitado
       if (config.soundEnabled) {
         playRFIDSound();
       }
-    });
+    };
 
-    socket.on('readings-update', (data: { readings: RFIDReading[], totalReadings: number, uniqueTIDs?: number, uniqueTags?: number }) => {
+    const handleReadingsUpdate = (data: { readings: RFIDReading[], totalReadings: number, uniqueTIDs?: number, uniqueTags?: number }) => {
       console.log('📊 Atualização de leituras:', data);
       setReadings(data.readings);
       setStatus(current => ({ 
@@ -97,18 +94,32 @@ export function useRFIDReader() {
         totalReadings: data.totalReadings,
         uniqueTags: (data.uniqueTags ?? data.uniqueTIDs) || 0
       }));
-    });
+    };
 
-    // Eventos de erro
-    socket.on('error', (data: { message: string }) => {
+    const handleError = (data: { message: string }) => {
       console.error('❌ Erro do servidor:', data.message);
       setError(data.message);
-    });
+    };
 
-    // Limpeza na desconexão
+    // Registrar eventos
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('connection-status', handleConnectionStatus);
+    socket.on('reading-status', handleReadingStatus);
+    socket.on('rfid-reading', handleRFIDReading);
+    socket.on('readings-update', handleReadingsUpdate);
+    socket.on('error', handleError);
+
+    // Cleanup: remover apenas os listeners deste componente, mas mantém socket ativo
     return () => {
-      console.log('🧹 Limpando conexão com servidor...');
-      socket.disconnect();
+      console.log('🧹 Removendo listeners do componente, mas mantendo socket ativo...');
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('connection-status', handleConnectionStatus);
+      socket.off('reading-status', handleReadingStatus);
+      socket.off('rfid-reading', handleRFIDReading);
+      socket.off('readings-update', handleReadingsUpdate);
+      socket.off('error', handleError);
     };
   }, [config.soundEnabled]);
 

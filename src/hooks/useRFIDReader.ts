@@ -28,27 +28,65 @@ interface ConnectionStatus {
   uniqueTags: number;
 }
 
-export function useRFIDReader() {
-  // Estado do sistema
-  const [config, setConfig] = useState<RFIDReaderConfig>({
-    ip: '192.168.99.201', // IP correto da antena
-    port: 8888,
-    power: 30,
-    antennas: [1, 2, 3, 4],
-    soundEnabled: true
-  });
+// Helper para persistir estado
+const getPersistedState = <T,>(key: string, defaultValue: T): T => {
+  try {
+    const item = sessionStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+};
 
-  const [readings, setReadings] = useState<RFIDReading[]>([]);
-  const [status, setStatus] = useState<ConnectionStatus>({
-    isConnected: false,
-    isReading: false,
-    totalReadings: 0,
-    uniqueTags: 0
-  });
+const setPersistedState = <T,>(key: string, value: T) => {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error('Erro ao persistir estado:', error);
+  }
+};
+
+export function useRFIDReader() {
+  // Estado do sistema - PERSISTIDO entre páginas
+  const [config, setConfig] = useState<RFIDReaderConfig>(() => 
+    getPersistedState('rfid-config', {
+      ip: '192.168.99.201',
+      port: 8888,
+      power: 30,
+      antennas: [1, 2, 3, 4],
+      soundEnabled: true
+    })
+  );
+
+  const [readings, setReadings] = useState<RFIDReading[]>(() => 
+    getPersistedState('rfid-readings', [])
+  );
+  
+  const [status, setStatus] = useState<ConnectionStatus>(() => 
+    getPersistedState('rfid-status', {
+      isConnected: false,
+      isReading: false,
+      totalReadings: 0,
+      uniqueTags: 0
+    })
+  );
 
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Persistir mudanças de estado
+  useEffect(() => {
+    setPersistedState('rfid-config', config);
+  }, [config]);
+
+  useEffect(() => {
+    setPersistedState('rfid-readings', readings);
+  }, [readings]);
+
+  useEffect(() => {
+    setPersistedState('rfid-status', status);
+  }, [status]);
 
   // Conectar ao servidor backend usando Singleton - MANTÉM CONEXÃO PERSISTENTE
   useEffect(() => {
@@ -109,6 +147,12 @@ export function useRFIDReader() {
     socket.on('rfid-reading', handleRFIDReading);
     socket.on('readings-update', handleReadingsUpdate);
     socket.on('error', handleError);
+
+    // Solicitar status atual do servidor ao montar
+    if (socket.connected) {
+      console.log('🔄 Solicitando status atual do servidor...');
+      socket.emit('get-status');
+    }
 
     // Cleanup: remover apenas os listeners deste componente, mas mantém socket ativo
     return () => {

@@ -1495,12 +1495,29 @@ async function disconnectFromRFIDReader() {
 io.on('connection', (socket) => {
   console.log('🔌 Cliente conectado:', socket.id);
   
-  // Enviar status atual
+  // Enviar status atual ao conectar
   socket.emit('connection-status', { 
     isConnected: !!isConnected,
     isReading: isReading,
     totalReadings: totalReadings,
     config: rfidConfig
+  });
+
+  // Handler para sincronizar status ao trocar de página
+  socket.on('get-status', () => {
+    console.log('🔄 Cliente solicitou status atual');
+    socket.emit('connection-status', { 
+      isConnected: !!isConnected,
+      isReading: isReading,
+      totalReadings: totalReadings,
+      uniqueTags: uniqueTIDs.size
+    });
+    socket.emit('reading-status', { isReading: isReading });
+    socket.emit('readings-update', { 
+      readings: readings,
+      totalReadings: totalReadings,
+      uniqueTIDs: uniqueTIDs.size
+    });
   });
 
   socket.on('connect-reader', async () => {

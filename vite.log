@@ -73,3 +73,12 @@
 4:42:03 PM [vite] hmr update /src/pages/ReaderPage.tsx, /src/index.css, /src/pages/ReadingsPage.tsx, /src/pages/DashboardPage.tsx, /src/pages/TagsPage.tsx, /src/pages/SettingsPage.tsx
 4:42:18 PM [vite] hmr update /src/pages/ReaderPage.tsx, /src/index.css, /src/pages/ReadingsPage.tsx, /src/pages/DashboardPage.tsx, /src/pages/TagsPage.tsx, /src/pages/SettingsPage.tsx
 4:45:54 PM [vite] page reload dist/index.html
+
+> portal-rfid-typescript@1.0.0 dev
+> vite
+
+
+  VITE v4.5.14  ready in 458 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://192.168.99.43:3000/

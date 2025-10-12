@@ -536,12 +536,10 @@ async function connectToRFIDReader() {
 
     console.log(`✅ Conectado ao leitor RFID em ${rfidConfig.ip}:${rfidConfig.port}!`);
     
-    // Iniciar sistema de keep-alive
-    // startKeepAlive();  // DESATIVADO - causa conflitos
-    startConnectionCheck();
-    // startReadingHealthCheck();  // DESATIVADO - causa conflitos
-    // startAutoRestart(); // DESATIVADO - para e reinicia a leitura desnecessariamente
-    startMemoryCheck(); // Iniciar monitoramento de memória
+    // Iniciar sistema de keep-alive INTELIGENTE (24/7)
+    startSmartKeepAlive();  // ✅ Mantém leitora funcionando sem parar
+    startConnectionCheck(); // ✅ Monitora conexão
+    startMemoryCheck();     // ✅ Monitora memória
     
     // NÃO iniciar leitura automaticamente - apenas conectar
     console.log('ℹ️ Leitor conectado. Use "Iniciar Leitura" para começar a ler tags.');
@@ -553,64 +551,93 @@ async function connectToRFIDReader() {
   }
 }
 
-// Sistema de keep-alive para manter conexão ativa
-function startKeepAlive() {
-  if (keepAliveInterval) {
-    clearInterval(keepAliveInterval);
+// ===== KEEP-ALIVE INTELIGENTE 24/7 =====
+// Sistema robusto que mantém leitora funcionando sem parar
+let smartKeepAliveInterval = null;
+let consecutiveFailures = 0;
+const MAX_CONSECUTIVE_FAILURES = 3;
+const SMART_KEEPALIVE_INTERVAL = 45000; // 45 segundos
+const NO_TAGS_TIMEOUT = 90000; // 90 segundos sem tags = reiniciar
+
+function startSmartKeepAlive() {
+  if (smartKeepAliveInterval) {
+    clearInterval(smartKeepAliveInterval);
   }
   
-  keepAliveInterval = setInterval(async () => {
+  smartKeepAliveInterval = setInterval(async () => {
     try {
-      console.log('🔌 Keep-alive: Verificando e mantendo leitor ativo...');
+      const now = Date.now();
       
-      // SEMPRE conectar e iniciar leitura a cada 30 segundos
+      // 1. VERIFICAR CONEXÃO
       if (!isConnected) {
-        console.log('  🔌 Leitor desconectado - reconectando...');
+        console.log('💓 [Keep-Alive 24/7] Leitor desconectado - reconectando...');
         try {
           await connectToRFIDReader();
-          console.log('  ✅ Reconectado com sucesso');
+          console.log('✅ [Keep-Alive 24/7] Reconectado com sucesso');
+          consecutiveFailures = 0;
         } catch (connectError) {
-          console.log('  ❌ Falha na reconexão:', connectError.message);
+          consecutiveFailures++;
+          console.log(`❌ [Keep-Alive 24/7] Falha na reconexão (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES})`);
           return;
         }
       }
       
-      // SEMPRE iniciar leitura se não estiver lendo
-      if (!isReading) {
-        console.log('  🟢 Leitura parada - iniciando automaticamente...');
-        try {
-          await startContinuousReading();
-          console.log('  ✅ Leitura iniciada automaticamente');
-        } catch (startError) {
-          console.log('  ❌ Falha ao iniciar leitura:', startError.message);
-        }
-      } else {
-        console.log('  📡 Leitura já está ativa - verificando saúde...');
+      // 2. VERIFICAR LEITURA
+      if (isReading) {
+        // Está marcado como lendo - verificar se realmente está recebendo tags
+        const timeSinceLastTag = lastReadingTime ? (now - lastReadingTime) : Infinity;
         
-        // Verificar se recebeu dados recentemente
-        if (lastReadingTime && (Date.now() - lastReadingTime) > 30000) { // 30 segundos
-          console.log('  ⚠️ Leitura ativa mas sem dados recentes - reiniciando...');
+        if (timeSinceLastTag > NO_TAGS_TIMEOUT) {
+          // Passou muito tempo sem tags - leitora pode ter "adormecido"
+          console.log(`⚠️ [Keep-Alive 24/7] Sem tags há ${Math.round(timeSinceLastTag/1000)}s - reiniciando leitura...`);
           try {
+            // Parar e reiniciar para "acordar" a leitora
+            await stopContinuousReading();
+            await new Promise(resolve => setTimeout(resolve, 500));
             await startContinuousReading();
-            console.log('  ✅ Leitura reiniciada com sucesso');
+            console.log('✅ [Keep-Alive 24/7] Leitura reiniciada - leitora acordada');
+            consecutiveFailures = 0;
           } catch (restartError) {
-            console.log('  ❌ Falha ao reiniciar leitura:', restartError.message);
+            consecutiveFailures++;
+            console.log(`❌ [Keep-Alive 24/7] Falha ao reiniciar (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES})`);
           }
         } else {
-          console.log('  ✅ Leitura funcionando normalmente');
+          // Recebendo tags normalmente
+          consecutiveFailures = 0;
         }
       }
       
-      // Atualizar tempo de atividade
-      lastActivityTime = Date.now();
-      console.log('💓 Keep-alive RFID - Leitor mantido ativo');
+      // 3. RECONEXÃO COMPLETA EM CASO CRÍTICO
+      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        console.log('🔴 [Keep-Alive 24/7] Falhas críticas - reconexão completa...');
+        try {
+          await disconnectFromRFIDReader();
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          await connectToRFIDReader();
+          if (isReading) {
+            await startContinuousReading();
+          }
+          console.log('✅ [Keep-Alive 24/7] Sistema recuperado');
+          consecutiveFailures = 0;
+        } catch (criticalError) {
+          console.log('❌ [Keep-Alive 24/7] Falha crítica - aguardando próximo ciclo');
+        }
+      }
+      
+      lastActivityTime = now;
       
     } catch (error) {
-      console.log('⚠️ Erro no keep-alive:', error.message);
+      console.log('⚠️ [Keep-Alive 24/7] Erro:', error.message);
     }
-  }, KEEP_ALIVE_INTERVAL);
+  }, SMART_KEEPALIVE_INTERVAL);
   
-  console.log('🔄 Keep-alive iniciado (30s) - SEMPRE mantém leitor ativo e lendo');
+  console.log('🔄 [Keep-Alive 24/7] Sistema iniciado - Portal funcionará sem parar');
+  console.log('  📊 Intervalo: 45s | Timeout sem tags: 90s | Reconexão crítica: 3 falhas');
+}
+
+// Sistema antigo de keep-alive (mantido como backup)
+function startKeepAlive() {
+  console.log('⚠️ Keep-alive antigo não é mais usado - usando Smart Keep-Alive 24/7');
 }
 
 // Verificação periódica da conexão
